@@ -49,12 +49,24 @@ SMOKE_IMAGE=pince npm run smoke
 
 A release is how people who run Pince on their own computer or in a container get a new version, and it is the point at which Azure is updated.
 
+The new version number reaches `main` through a pull request, like any other change, and the tag follows once it is merged. For version 1.2.0:
+
 ```sh
-npm version patch
-git push --follow-tags
+git switch -c release-1.2.0 origin/main
+npm version minor --no-git-tag-version
+git commit -am "Release 1.2.0"
+git push -u origin release-1.2.0
 ```
 
-`npm version` raises the version in `package.json`, commits, and creates the matching tag (`patch`, `minor` or `major`). The Release workflow refuses a tag that does not match `package.json`, runs the full checks, and then publishes a GitHub release with notes generated from the merged pull requests.
+`npm version` raises the version in `package.json` (`patch`, `minor` or `major`); `--no-git-tag-version` leaves the commit and the tag to you. Open a pull request for the branch and merge it when the checks pass. Then tag the merged commit and push the tag:
+
+```sh
+git fetch origin
+git tag v1.2.0 origin/main
+git push origin v1.2.0
+```
+
+The Release workflow refuses a tag that does not match `package.json`, runs the full checks, and then publishes a GitHub release with notes generated from the merged pull requests. A pushed release tag cannot be moved or deleted, and a published release cannot be changed, so a mistake is corrected with the next version.
 
 To update a local library from a release, download it or pull the tag, then run `npm run setup` and `npm start`. The data in `.library/` is left alone.
 
@@ -70,7 +82,7 @@ The registry accepts the workflow's own token, which exists for that run only, s
 
 **Once, after the first release:** check that the image can be pulled without signing in. GitHub can create a new package as private; if it did, open the package from your profile's **Packages** tab and make it public under **Package settings → Change visibility**. Later releases keep that choice.
 
-A published image is never rebuilt. When the image's base has a newer build, Dependabot proposes the change as a pull request; merge it and release a patch version to publish it.
+A published image is never rebuilt. When the image's base has a newer build, Dependabot proposes the change as a pull request; merge it and release a patch version to publish it. Dependabot proposes newer packages and newer versions of the workflows' actions the same way.
 
 ## Deploying to Azure
 
@@ -117,13 +129,28 @@ In the repository's **Settings**:
    - `AZURE_SUBSCRIPTION_ID`: from `az account show --query id -o tsv`.
 3. Optional environment **variables**, if you did not use the defaults: `LIBRARY_RESOURCE_GROUP` and `LIBRARY_LOCATION`.
 4. To deploy every release automatically, add the repository **variable** `DEPLOY_RELEASES_TO_AZURE` with the value `true`. Without it, releases are published and Azure is updated only when you start **Deploy to Azure** by hand from the **Actions** tab.
-5. **Branches → Add rule** for `main`: require the **Tests** checks to pass before merging.
+5. The rules under [Repository rules](#repository-rules) below.
 
 ### What the public log shows
 
 The log of a public repository can be read by anyone, so the deploy workflow blanks the subscription's name, the names and addresses of the library's resources, and the deployment token before anything is published. A blanked value appears as `***`. Storage keys and service keys never pass through the log: the scripts hand them over through standard input.
 
 If you ever see a real address, key or name in a log, delete that run's log from the **Actions** tab and, for a key, rotate it at the service that issued it.
+
+## Repository rules
+
+These are settings of the repository on GitHub, not files in it, so a fork starts without them. In **Settings**:
+
+| Where | Setting | Why |
+| --- | --- | --- |
+| Branches, rule for `main` | Require a pull request and the **Tests** checks, with no approvals required, for administrators too; no force pushes, no deletion | Nothing reaches `main` unchecked, not even from the maintainer |
+| General, Pull Requests | Allow squash merging only; automatically delete head branches | One commit on `main` for each pull request, which the release notes are built from |
+| Rules, Rulesets | A tag ruleset for `v*` that restricts updates and deletions | A tag is what publishes an image, and an image never changes |
+| General, Releases | Enable release immutability | A published release cannot be edited or re-pointed |
+| Actions, General | Require approval for all external contributors; read-only workflow permissions | A stranger's pull request runs nothing until you have looked at it |
+| Advanced Security | Dependabot alerts and security updates, secret scanning with push protection, private vulnerability reporting, CodeQL default setup | Known problems in packages, keys pushed by mistake and risky code are reported, to you first |
+
+One person cannot approve their own pull request, which is why no approval is required. With more than one maintainer, require one.
 
 ## How the workflows are kept safe
 
