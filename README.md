@@ -2,7 +2,7 @@
 
 **A family library · Biblioteca familiei.** Pince is a small, private reading catalogue for one family, in Romanian and English. A parent and a child add the books on their shelves, mark what they have read, keep private notes, and send a friend a public, read-only link to a single book.
 
-It was built for a home library of about 500 books, many of them Romanian children's editions that the usual book catalogues do not know. It runs on your own computer with no cloud account, or on Azure for a few dollars a month.
+It was built for a home library of about 500 books, many of them Romanian children's editions that the usual book catalogues do not know. It runs on your own computer with no cloud account, in a container on a home server, or on Azure for a few dollars a month.
 
 > This is a personal project shared as it is. It is built around one family's needs (two accounts, one library) and is not a multi-tenant service.
 
@@ -67,6 +67,15 @@ On the first start the terminal shows a one-time **set-up link**. Open it to cho
 
 Photo recognition and cover lookups need keys for outside services. Add them in the set-up screen, or later in **Family settings**. [Configuration](docs/CONFIGURATION.md) lists every setting and where each one is kept.
 
+## Run it in a container
+
+```sh
+docker run -d --name pince -p 127.0.0.1:46173:46173 -v pince-data:/data ghcr.io/danadrianparaschiv/pince:1
+docker logs pince
+```
+
+The log shows the address and a one-time set-up link. The image is published with every release, for x86-64 and ARM64. [Running in a container](docs/DOCKER.md) covers versions, a home server with HTTPS, data and upgrades.
+
 ## Put it on Azure
 
 ```sh
@@ -94,7 +103,7 @@ The tests run offline in a few seconds and cost nothing: every outside service i
 | `worker/` | The background cover worker's entry point; it reuses the lookup code in `api/src/` |
 | `scripts/` | Local server, its set-up screen, health check and backup; Azure deployment; helpers that store service keys |
 | `infra/` | Bicep templates for the Azure resources |
-| `Dockerfile`, `docker/` | A container image of the local library, and a Compose example that puts it behind HTTPS |
+| `Dockerfile`, `docker/` | The container image of the local library, published with every release, and a Compose example that puts it behind HTTPS |
 | `test/` | The test suite, its helpers and fixtures; see [the test guide](test/README.md) |
 | `docs/` | User guide, architecture, configuration and the original requirements |
 
@@ -108,7 +117,7 @@ The tests run offline in a few seconds and cost nothing: every outside service i
 
 ## Documentation
 
-- [What is supported](docs/SUPPORT.md): the two ways to run Pince, how they differ, and how to get help
+- [What is supported](docs/SUPPORT.md): the three ways to run Pince, how they differ, and how to get help
 - [Running locally](docs/LOCAL.md): install, settings, backups, upgrades, troubleshooting
 - [Running in a container](docs/DOCKER.md): building the image, a home server with HTTPS, data, upgrades
 - [User guide](docs/USER-GUIDE.md): adding books, covers, sharing, filters, family settings

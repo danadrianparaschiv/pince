@@ -1,11 +1,12 @@
 # Continuous integration and delivery
 
-Three GitHub Actions workflows check every change, publish releases, and deploy to Azure. None of them stores a password or a key, and none of them runs with access to Azure for a pull request.
+Four GitHub Actions workflows check every change, publish releases and the container image, and deploy to Azure. None of them stores a password or a key, and none of them runs with access to Azure for a pull request.
 
 | Workflow | Runs when | What it does |
 | --- | --- | --- |
-| [Tests](../.github/workflows/tests.yml) | Every push to `main` and every pull request | Checks both targets, with no secrets and no cloud account |
-| [Release](../.github/workflows/release.yml) | A version tag such as `v1.2.0` is pushed | Checks the code, publishes a GitHub release, and optionally deploys it to Azure |
+| [Tests](../.github/workflows/tests.yml) | Every push to `main` and every pull request | Checks all three targets, with no secrets and no cloud account |
+| [Release](../.github/workflows/release.yml) | A version tag such as `v1.2.0` is pushed | Checks the code, publishes a GitHub release and the container image, and optionally deploys it to Azure |
+| [Container image](../.github/workflows/image.yml) | Called by a release | Builds the image for x86-64 and ARM64, tries each as a container, and publishes it to the GitHub registry |
 | [Deploy to Azure](../.github/workflows/deploy-azure.yml) | Started by hand, or called by a release | Publishes the code to an existing library |
 
 ## What "Tests" checks
@@ -25,7 +26,7 @@ Windows runs every time but does not block a merge yet. Once it has passed for a
 3. builds the three Bicep templates;
 4. builds the package that would be deployed, with the Linux image libraries Azure needs.
 
-**The container image**, with Docker and nothing else:
+**The container image**, with Docker and nothing else, on x86-64 and on ARM64:
 
 1. builds the image from the `Dockerfile`;
 2. checks that only the library's own files are in it;
@@ -46,7 +47,7 @@ SMOKE_IMAGE=pince npm run smoke
 
 ## Releasing
 
-A release is how people who run Pince on their own computer get a new version, and it is the point at which Azure is updated.
+A release is how people who run Pince on their own computer or in a container get a new version, and it is the point at which Azure is updated.
 
 ```sh
 npm version patch
@@ -56,6 +57,20 @@ git push --follow-tags
 `npm version` raises the version in `package.json`, commits, and creates the matching tag (`patch`, `minor` or `major`). The Release workflow refuses a tag that does not match `package.json`, runs the full checks, and then publishes a GitHub release with notes generated from the merged pull requests.
 
 To update a local library from a release, download it or pull the tag, then run `npm run setup` and `npm start`. The data in `.library/` is left alone.
+
+### The container image
+
+After the GitHub release exists, the same run publishes the image:
+
+1. It builds the image on an x86-64 and on an ARM64 runner, starts a container of each build and uses it, with the steps of `npm run smoke`. A build that fails this is not pushed, and then nothing is published under the version's names.
+2. It joins the two builds under the version's names. Release 1.2.3 is published as `1.2.3`, `1.2`, `1` and `latest`, so a library that follows `1` gets fixes and features by pulling again.
+3. It stores a signed record that the image was built by this workflow from this repository, which `gh attestation verify` checks; see [Running in a container](DOCKER.md#checking-where-an-image-came-from).
+
+The registry accepts the workflow's own token, which exists for that run only, so nothing is stored. The image is named after the repository: a fork publishes to its own account.
+
+**Once, after the first release:** check that the image can be pulled without signing in. GitHub can create a new package as private; if it did, open the package from your profile's **Packages** tab and make it public under **Package settings → Change visibility**. Later releases keep that choice.
+
+A published image is never rebuilt. When the image's base has a newer build, Dependabot proposes the change as a pull request; merge it and release a patch version to publish it.
 
 ## Deploying to Azure
 
@@ -112,15 +127,18 @@ If you ever see a real address, key or name in a log, delete that run's log from
 
 ## How the workflows are kept safe
 
-- **Least privilege.** Every workflow starts with read-only access to the repository. Only the release job may write (to create the release), and only the deploy job may ask Azure for a token.
+- **Least privilege.** Every workflow starts with read-only access to the repository. Only the release job may write to it (to create the release), only the image jobs may write to the registry, and only the deploy job may ask Azure for a token.
 - **No secrets for pull requests.** Pull requests, including those from forks, run only the Tests workflow, which uses no secrets.
 - **Pinned actions.** Each action is referenced by its exact commit, with the version in a comment, so a moved tag cannot change what runs. When updating one, replace both.
 - **Approval before Azure.** With required reviewers on the `azure` environment, nothing is deployed until you approve that run.
 - **One deployment at a time.** A second deployment waits for the first instead of interrupting it.
 
-One of the tests fails if a workflow references an action by a tag, or if the deploy workflow gains a pull-request trigger.
+- **Tried before published.** An image is pushed only after a container of it has passed the start-up check, and only a release can start that workflow.
+
+One of the tests fails if a workflow references an action by a tag, if the deploy workflow gains a pull-request trigger, or if anything but a release could publish an image.
 
 ## Not automated
 
 - Creating a library (`init`), cost alerts (`budgets`) and storing service keys stay manual, because they take passwords or keys typed by you.
 - Removing a library is manual too, and deliberately needs a typed confirmation: `./scripts/deploy.sh destroy`.
+- Making the image's package public, once, is done by hand in GitHub.

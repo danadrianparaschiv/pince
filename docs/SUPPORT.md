@@ -1,19 +1,19 @@
 # What is supported
 
-Pince runs in two places, and those two are the ones this project is tested on, documented for, and fixed when they break.
+Pince runs in three ways, and those three are the ones this project is tested on, documented for, and fixed when they break.
 
-| | On your own computer | On Azure |
-| --- | --- | --- |
-| Guide | [Running locally](LOCAL.md) | [Deployment and costs](../DEPLOY.md) |
-| What you need | Node.js 22 | An Azure subscription, Node.js 22, Azure CLI with Bicep, Static Web Apps CLI 2.1.0 or newer, Bash |
-| Systems | macOS and Linux. Windows is tested in CI but not yet relied on | Deploying from macOS, Linux or WSL |
-| Who can use it | One person at that computer | The family, from any phone or computer; friends through public book links |
-| Checked by | Tests, and a start-up check on every change | The same tests, plus a build of the templates and the package on every change, and the script's own checks after each deployment |
-| Health check | `npm run doctor` | `./scripts/deploy.sh doctor` and `./scripts/deploy.sh status` |
-| Backup | `npm run backup`, or **Family settings** in the app | **Family settings** in the app |
-| Removing it | Delete the folder | `./scripts/deploy.sh destroy` |
+| | On your own computer | In a container | On Azure |
+| --- | --- | --- | --- |
+| Guide | [Running locally](LOCAL.md) | [Running in a container](DOCKER.md) | [Deployment and costs](../DEPLOY.md) |
+| What you need | Node.js 22 | Docker | An Azure subscription, Node.js 22, Azure CLI with Bicep, Static Web Apps CLI 2.1.0 or newer, Bash |
+| Systems | macOS and Linux. Windows is tested in CI but not yet relied on | Linux containers on x86-64 and ARM64 | Deploying from macOS, Linux or WSL |
+| Who can use it | One person at that computer | One person at that computer, or the family on your network through a proxy with HTTPS | The family, from any phone or computer; friends through public book links |
+| Checked by | Tests, and a start-up check on every change | The same tests, and the same start-up check against a container on both kinds of computer, on every change and before an image is published | The same tests, plus a build of the templates and the package on every change, and the script's own checks after each deployment |
+| Health check | `npm run doctor` | `docker ps`, and `node scripts/doctor.mjs` inside the container | `./scripts/deploy.sh doctor` and `./scripts/deploy.sh status` |
+| Backup | `npm run backup`, or **Family settings** in the app | **Family settings** in the app, or the backup command inside the container | **Family settings** in the app |
+| Removing it | Delete the folder | Remove the container and its volume | `./scripts/deploy.sh destroy` |
 
-Both run the same code and keep the same data; only the storage behind them differs. A backup made in one restores into the other.
+All three run the same code and keep the same data. The container is the local library in a package; only Azure has different storage behind it. A backup made in one restores into any other.
 
 The Azure path is rehearsed from a clean copy of the repository: `doctor`, `init`, `status`, `publish` and `destroy`, in a resource group of its own. It was last rehearsed on 20 November 2026 on macOS, without photo recognition and with `--with-vision`, in a second subscription. The run with photo recognition started from the zip that GitHub serves for the repository. A real photo of several front covers was read and its covers cut out, both before and after a `publish` that carried a change. That `publish` left every setting as it was, including the service keys on the cover worker, and a book added afterwards got its cover from the worker. The library was then removed and nothing was left behind.
 
@@ -23,7 +23,7 @@ On 21 November 2026 the rest was rehearsed in the same kind of container. The tw
 
 The deploy script has not yet been rehearsed on WSL, nor in a subscription that has never used these Azure services.
 
-## How the two differ
+## How they differ
 
 - **Reach.** A local library listens on that computer only, over plain HTTP, unless you put a proxy with HTTPS in front and tell the library so. Otherwise phones on the home network cannot open it, and public book links work only on that computer. For a library the family uses from several devices without running a server at home, deploy to Azure.
 - **Cover lookups.** Locally they run inside the same program while it is open. On Azure a small separate worker runs them, including after the browser is closed.
@@ -33,7 +33,7 @@ The deploy script has not yet been rehearsed on WSL, nor in a subscription that 
 ## What is not supported
 
 - Other clouds or hosting services.
-- A published container image. The repository can build one, and every change builds it and tries it, but none is published and its use on a home server is not rehearsed; see [Running in a container](DOCKER.md).
+- A container on a real home server. The image and the Compose example are tried on every change and were used behind Caddy on a developer's computer, but not on a NAS, with a public name, or over months of upgrades.
 - Reaching a local library from other devices. [The settings for it](LOCAL.md#reaching-it-from-other-devices) are covered by the tests, with a stand-in for the proxy, but no real proxy or home-server set-up is rehearsed here.
 - More than one family, or more than the two accounts, in one library.
 - Node.js versions other than 22.
@@ -42,7 +42,7 @@ These are not refused on principle. They are simply untested, and a change may b
 
 ## Versions
 
-Releases are numbered and listed on the repository's **Releases** page. Only the latest release is supported. A release note says so when an upgrade needs a step beyond the usual one: `npm run setup` locally, `./scripts/deploy.sh publish` on Azure.
+Releases are numbered and listed on the repository's **Releases** page. Only the latest release is supported. A release note says so when an upgrade needs a step beyond the usual one: `npm run setup` locally, pulling the image again for a container, `./scripts/deploy.sh publish` on Azure.
 
 ## Getting help
 

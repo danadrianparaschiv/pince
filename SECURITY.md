@@ -35,6 +35,7 @@ If a secret is ever committed, removing the file is not enough, because it stays
 - **Logs** do not contain request bodies, credentials or photos.
 - **On your own computer** the database, the pictures and a backup written from the command line are readable by your user account only.
 - **A library on your own computer that other devices reach** listens beyond that computer only when told to. Told the HTTPS address it is opened at, it accepts changes only from pages at that address and keeps its session cookie to HTTPS. Its pages carry the same browser policy as the deployed site. It takes a caller's address from a proxy only for the number of proxies you declare, and otherwise from the connection itself.
+- **The container image** is built by the release workflow from this repository, runs as an unprivileged user, and carries a signed record of where it was built. It holds the library's own files and nothing from the folder it was built in.
 - **Setting up a library on your own computer** from the browser needs the one-time link printed in the terminal, which stops working when set-up is finished. Keys added there or in Family settings are kept in the git-ignored `.library/` folder, readable by you only, and are never sent back to the browser. The deployed site has no set-up screen and accepts no keys from the browser.
 
 [Architecture](docs/ARCHITECTURE.md#security-design) has the details, and `test/security.test.js` exercises most of these rules.

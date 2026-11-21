@@ -6,7 +6,7 @@
 #   docker logs pince        shows the address and the one-time set-up link
 #
 # Other devices should reach it through a proxy that adds HTTPS; docker/compose.yaml has one.
-# docs/LOCAL.md explains the settings.
+# Each release publishes this image; docs/DOCKER.md is the guide.
 
 # The base image is named by its exact contents; a tag could be moved to other contents.
 FROM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS dependencies

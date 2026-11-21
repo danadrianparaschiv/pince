@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag such as v1.2.0 checks the code, publishes a GitHub release for people who run the
-# library on their own computer, and, when enabled, deploys the same code to Azure.
+# library on their own computer, publishes the container image of that version, and, when enabled,
+# deploys the same code to Azure.
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
@@ -52,6 +53,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: gh release create "$TAG" --verify-tag --generate-notes --title "Pince $TAG"
+
+  image:
+    name: Publish the container image
+    needs: release
+    permissions:
+      contents: read
+      packages: write # To publish the image; the registry accepts the workflow's own token.
+      id-token: write # To sign the record of where the image was built.
+      attestations: write
+    uses: ./.github/workflows/image.yml
 
   azure:
     name: Deploy the release to Azure
