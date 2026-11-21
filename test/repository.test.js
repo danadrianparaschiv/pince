@@ -149,7 +149,7 @@ test('the add-books screen has the same labels in Romanian and English', () => {
 
 test('workflows pin their actions, keep Azure away from pull requests, and start read-only', async () => {
   const names = (await readdir(join(root, '.github/workflows'))).filter((name) => name.endsWith('.yml'));
-  assert.deepEqual(names.sort(), ['deploy-azure.yml', 'release.yml', 'tests.yml']);
+  assert.deepEqual(names.sort(), ['deploy-azure.yml', 'image.yml', 'release.yml', 'tests.yml']);
   for (const name of names) {
     const text = await read('.github/workflows/' + name);
     // An action from elsewhere is named by its exact commit; a tag could be moved to other code.
@@ -168,7 +168,21 @@ test('workflows pin their actions, keep Azure away from pull requests, and start
   assert.doesNotMatch(deploy, /^\s+(pull_request|push):/m);
   assert.match(deploy, /environment: azure/);
   // Only the deploy path may ask Azure for a token, and only the release job may write.
-  assert.doesNotMatch(await read('.github/workflows/tests.yml'), /id-token|contents: write|secrets\./);
+  const tests = await read('.github/workflows/tests.yml');
+  assert.doesNotMatch(tests, /id-token|contents: write|packages: write|attestations|secrets\./);
+  assert.doesNotMatch(tests, /docker (push|login)/);
+
+  // The container image is published by a release and by nothing else. Each build is tried as
+  // a container before it is pushed, and only that workflow may write to the registry.
+  const image = await read('.github/workflows/image.yml');
+  assert.match(image, /^on:\n  workflow_call:\n\n/m);
+  assert.doesNotMatch(image, /^\s+(pull_request|push|schedule|workflow_dispatch):/m);
+  assert(image.indexOf('npm run smoke') > 0 && image.indexOf('npm run smoke') < image.indexOf('docker push'));
+  assert.doesNotMatch(image, /secrets\./);
+  for (const name of ['deploy-azure.yml', 'tests.yml'])
+    assert.doesNotMatch(await read('.github/workflows/' + name), /packages: write/, name);
+  const release = await read('.github/workflows/release.yml');
+  assert.match(release, /needs: release\n(.*\n)+?\s+uses: \.\/\.github\/workflows\/image\.yml/);
 });
 
 test('the container image has a pinned base, runs unprivileged and takes in only what is listed', async () => {

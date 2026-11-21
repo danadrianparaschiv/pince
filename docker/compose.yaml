@@ -1,6 +1,6 @@
 # The library on a home server, behind Caddy, which adds HTTPS. From this folder:
 #
-#   PINCE_HOST=books.example.org docker compose up -d --build
+#   PINCE_HOST=books.example.org docker compose up -d
 #   docker compose logs pince        shows the one-time set-up link
 #
 # PINCE_HOST is the name people type to open the library. It must lead to this computer, and
@@ -8,7 +8,9 @@
 # comes from. docs/LOCAL.md explains the library's settings.
 services:
   pince:
-    build: ..
+    # The newest release of version 1. To build from the repository instead, with this file
+    # still in its `docker` folder, replace this line with:  build: ..
+    image: ghcr.io/danadrianparaschiv/pince:1
     restart: unless-stopped
     environment:
       # The address browsers open. Changes are accepted only from pages at this address.

@@ -77,9 +77,18 @@ jobs:
           test -d "$RUNNER_TEMP/package/api/node_modules/@img/sharp-linux-x64"
 
   container:
-    name: Container image
-    runs-on: ubuntu-latest
+    name: Container image on ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
+    # The image is offered for both kinds of computer, so both are built and tried.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

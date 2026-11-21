@@ -1,37 +1,44 @@
 # Running Pince in a container
 
-The container image holds the same library that [runs on your own computer](LOCAL.md): one program, with the catalogue, the pictures and the saved settings in one folder. It suits a home server or a NAS that is always on.
+The container image holds the same library that [runs on your own computer](LOCAL.md): one program, with the catalogue, the pictures and the saved settings in one folder. It suits a home server or a NAS that is always on, and needs [Docker](https://docs.docker.com/get-docker/) and nothing else.
 
-No image is published yet. You build it from a copy of the repository, which needs [Docker](https://docs.docker.com/get-docker/) and nothing else.
+Every release publishes the image to the GitHub registry as `ghcr.io/danadrianparaschiv/pince`, for x86-64 and for ARM64 computers such as a Raspberry Pi or a recent NAS.
 
-## Build and start
-
-In the project folder:
+## Start
 
 ```sh
-docker build -t pince .
-```
-
-```sh
-docker run -d --name pince -p 127.0.0.1:46173:46173 -v pince-data:/data pince
+docker run -d --name pince -p 127.0.0.1:46173:46173 -v pince-data:/data ghcr.io/danadrianparaschiv/pince:1
 ```
 
 ```sh
 docker logs pince
 ```
 
-The last command shows the library's address and the one-time **set-up link**. Open the link in a browser on the same computer to choose the two passwords and add the keys of the optional services, as described in [Set up in the browser](LOCAL.md#set-up-in-the-browser). The link is printed again at every start until set-up is finished.
+The second command shows the library's address and the one-time **set-up link**. Open the link in a browser on the same computer to choose the two passwords and add the keys of the optional services, as described in [Set up in the browser](LOCAL.md#set-up-in-the-browser). The link is printed again at every start until set-up is finished.
 
 Started this way, the library answers on that computer only, at <http://127.0.0.1:46173>.
+
+## Which version
+
+The part after the colon chooses the version:
+
+| Name | What you get |
+| --- | --- |
+| `1` | The newest release of version 1. Recommended: pulling again brings its fixes and new features |
+| `1.2` | The newest fix of version 1.2 |
+| `1.2.3` | Exactly that release |
+| `latest` | The newest release, whatever its number |
+
+The repository's **Releases** page lists the versions and what changed in each.
 
 ## On a home server, with HTTPS
 
 Other devices should reach the library through a proxy that adds HTTPS. Without it, passwords and service keys cross the network unprotected, and browsers switch off features that adding books relies on.
 
-The `docker` folder has an example that runs the library behind [Caddy](https://caddyserver.com/). In that folder:
+The `docker` folder of the repository has an example that runs the library behind [Caddy](https://caddyserver.com/). Copy its two files, `compose.yaml` and `Caddyfile`, into a folder on the server, and in that folder:
 
 ```sh
-PINCE_HOST=books.example.org docker compose up -d --build
+PINCE_HOST=books.example.org docker compose up -d
 ```
 
 ```sh
@@ -83,17 +90,27 @@ An existing file is never overwritten, so remove or rename the one in the volume
 
 ## Upgrading
 
-Get the new version of the repository, build the image again, and replace the container. The volume, and with it your library, is left alone:
+Pull the image again and replace the container. The volume, and with it your library, is left alone. Back up first if the release notes mention a change to the data.
 
 ```sh
-docker build -t pince .
+docker pull ghcr.io/danadrianparaschiv/pince:1
 ```
 
 ```sh
 docker rm -f pince
 ```
 
-Then start it with the same `docker run` command as before. With the Compose example, `docker compose up -d --build` does all three steps.
+Then start it with the same `docker run` command as before. With the Compose example:
+
+```sh
+docker compose pull
+```
+
+```sh
+docker compose up -d
+```
+
+An image never changes once published. Security fixes for the system inside it arrive as a new release, like any other change.
 
 ## Checking and stopping
 
@@ -107,9 +124,26 @@ It notes that the port is in use, which inside a running container is the librar
 
 `docker stop pince` lets requests in progress finish and closes the database before the container ends.
 
+## Checking where an image came from
+
+Each published image carries a signed record that it was built by this repository's release workflow. With the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify oci://ghcr.io/danadrianparaschiv/pince:1 --repo danadrianparaschiv/pince
+```
+
+## Building it yourself
+
+From a copy of the repository:
+
+```sh
+docker build -t pince .
+```
+
+Use `pince` in place of the published name in the commands above. In the Compose example, replace the `image:` line with `build: ..` when the file is still in the repository's `docker` folder.
+
 ## Limits
 
-- **Not published.** There is no image to pull yet, and no promise about one; see [What is supported](SUPPORT.md).
-- **What is tried.** Every change builds the image on Linux (x86-64), starts a container and uses it: set-up with the one-time link, sign-in, saving a book, running as behind an HTTPS proxy, and a clean stop. The image was also built and used by hand on ARM64. The Compose example was tried once with Caddy on a developer's computer, not on a home server.
+- **What is tried.** Every change builds the image on x86-64 and on ARM64, starts a container on each and uses it: set-up with the one-time link, sign-in, saving a book, running as behind an HTTPS proxy, and a clean stop. A release repeats this before it publishes anything. The Compose example was tried once with Caddy on a developer's computer, not on a home server.
 - **One container per data volume.** Do not start two on the same volume.
 - **Plain HTTP from another device** is enough to browse, but adding books needs HTTPS.
