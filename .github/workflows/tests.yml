@@ -1,0 +1,77 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# These jobs need the repository's files and nothing else: no secrets, no cloud account.
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local:
+    name: Local library on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    # Windows is tried on every run but does not block a merge until it has a record of passing.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - name: Install
+        run: npm run setup
+      - name: Health check
+        run: npm run doctor
+      - name: Formatting of the test suite
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run format:check
+      - name: Tests with coverage limits
+        run: npm run coverage
+      - name: Start the library and use it
+        run: npm run smoke
+
+  azure:
+    name: Azure deployment code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Lint the deployment script
+        run: shellcheck scripts/deploy.sh
+      - name: Check the helper scripts parse
+        run: |
+          for script in scripts/*.js scripts/*.mjs worker/*.js; do node --check "$script"; done
+      - name: Build the infrastructure templates
+        run: |
+          for template in infra/*.bicep; do az bicep build --file "$template" --stdout > /dev/null; done
+      - name: Build the package that would be deployed
+        run: |
+          ./scripts/deploy.sh package "$RUNNER_TEMP/package"
+          test -f "$RUNNER_TEMP/package/web/index.html"
+          test -f "$RUNNER_TEMP/package/web/release.json"
+          test -f "$RUNNER_TEMP/package/api/src/azure.js"
+          test -d "$RUNNER_TEMP/package/api/node_modules/@img/sharp-linux-x64"

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Local library data: generated passwords, the SQLite catalogue, covers and shelf photos.
+.library/
+
+# Settings and credentials. Only the example file, which holds names and no values, is tracked.
+.env
+.env.*
+!.env.example
+local.settings.json
+.azure/
+
+# Photos stay out of the repository. A phone photo carries the place it was taken, and a photo
+# of a book cover shows artwork that belongs to its publisher (see CONTRIBUTING.md).
+test/sample-images/
+test/sample-photos/
+
+# Editor, assistant and system files
+.DS_Store
+.claude/
+*.log

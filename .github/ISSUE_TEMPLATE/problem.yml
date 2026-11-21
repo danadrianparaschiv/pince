@@ -1,0 +1,43 @@
+name: Something does not work
+description: A problem running Pince on your computer or on Azure
+labels: [problem]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. Please do **not** paste keys, passwords, a backup file or the address of your library. For a security problem, use the repository's Security tab instead of this form.
+  - type: dropdown
+    id: target
+    attributes:
+      label: Where are you running it?
+      options:
+        - On my own computer
+        - On Azure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release you are using, or the commit if you run from the main branch.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Operating system
+      placeholder: macOS 15, Ubuntu 24.04, Windows 11 with WSL
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: The steps that lead to the problem, in order.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Health check output
+      description: "Paste the output of `npm run doctor` (local) or `./scripts/deploy.sh doctor` (Azure). It contains no keys or passwords. Remove your subscription's name if you prefer."
+      render: text

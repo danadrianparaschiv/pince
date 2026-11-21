@@ -1,0 +1,127 @@
+.parent-panel {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.parent-panel h1 {
+  font-size: clamp(42px, 5.5vw, 71px);
+  margin: 1rem 0 1.8rem;
+}
+.parent-panel h2 {
+  font-size: clamp(25px, 3.1vw, 35px);
+  margin-bottom: 12px;
+}
+.parent-section {
+  border-top: 1px solid var(--line);
+  padding: 24px 0;
+}
+.parent-section p {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.parent-panel label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.parent-panel label.check {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 8px;
+}
+.parent-panel input:not([type='checkbox']),
+.parent-panel select {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  padding: 9px 12px;
+  min-height: 44px;
+  max-width: 100%;
+}
+.parent-panel input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ink);
+}
+.parent-fields {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.parent-fields > * {
+  max-width: 100%;
+}
+/* A link to copy is shown whole where there is room for it. */
+.parent-fields > .parent-link {
+  flex: 1 1 26em;
+}
+.parent-fields > .parent-link input {
+  width: 100%;
+}
+.parent-metrics {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.parent-metrics > div {
+  min-width: 180px;
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 15px;
+}
+.parent-metrics strong {
+  display: block;
+  font: 500 31px var(--serif);
+  margin-bottom: 6px;
+}
+.parent-panel .feedback {
+  font-weight: 600;
+  color: var(--accent);
+  min-height: 23px;
+}
+.parent-panel input[type='file'] {
+  width: min(100%, 330px);
+}
+.parent-photos { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.parent-photos li { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.parent-photos li > div { display: grid; gap: 2px; margin-right: auto; }
+.parent-photos li span { color: var(--muted); font-size: 0.9rem; }
+.parent-photo-open img { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); }
+
+
+/* Service keys: one card per service, in Family settings and in the set-up screen. */
+.service-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 16px 18px 8px; margin: 14px 0; }
+.service-card h3 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; font-size: 22px; margin: 0 0 8px; }
+.service-state { font: 600 0.8rem var(--sans); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+.service-state.is-set { color: var(--ink); border-color: var(--ink); }
+.service-fields { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin: 14px 0 6px; }
+.service-fields label { flex: 1 1 15em; }
+.service-fields input { width: 100%; }
+.service-fixed { font-weight: 600; }
+
+/* The set-up screen of a local library. */
+.setup-panel { max-width: 760px; }
+.setup-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 6px; padding: 0; counter-reset: step; color: var(--muted); }
+.setup-steps li { counter-increment: step; display: flex; align-items: center; gap: 8px; }
+.setup-steps li::before { content: counter(step); display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 50%; font-size: 0.85rem; font-weight: 600; }
+.setup-steps li[aria-current] { color: var(--ink); font-weight: 600; }
+.setup-steps li[aria-current]::before { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.setup-steps li.is-done::before { content: '✓'; border-color: var(--ink); color: var(--ink); }
+.setup-panel h2:focus { outline: none; }
+.setup-accounts { display: grid; gap: 14px; }
+.setup-accounts fieldset { display: flex; flex-wrap: wrap; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin: 0; padding: 12px 18px 16px; }
+.setup-accounts legend { font: 500 20px var(--serif); padding: 0 6px; }
+.setup-accounts fieldset label { flex: 1 1 15em; }
+.setup-accounts fieldset input { width: 100%; }
+.setup-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 6px; }
+.setup-file { overflow-wrap: anywhere; font-size: 0.9rem; }
+.setup-summary { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.setup-summary li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
+.setup-hint { color: var(--muted); border-left: 3px solid var(--gold); padding-left: 12px; }
+.setup-panel p.form-error { color: #94391f; font-weight: 600; }
+.login-copy .lede:has(+ .setup-hint) { margin-bottom: 14px; }
+.setup-hint { margin: 0 0 22px; }

@@ -1,0 +1,65 @@
+name: Release
+
+# Pushing a tag such as v1.2.0 checks the code, publishes a GitHub release for people who run the
+# library on their own computer, and, when enabled, deploys the same code to Azure.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Check the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - name: The tag matches the version in package.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: test "$TAG" = "v$(node -p "require('./package.json').version")"
+      - name: Install
+        run: npm run setup
+      - name: Formatting, tests and coverage limits
+        run: npm run check
+      - name: Start the library and use it
+        run: npm run smoke
+
+  release:
+    name: Publish the GitHub release
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # To create the release; nothing else in this workflow can write.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Create the release with notes from the merged changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --verify-tag --generate-notes --title "Pince $TAG"
+
+  azure:
+    name: Deploy the release to Azure
+    needs: release
+    # Off unless the repository variable is set, so a fork without an Azure library releases cleanly.
+    if: vars.DEPLOY_RELEASES_TO_AZURE == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-azure.yml
+    secrets: inherit

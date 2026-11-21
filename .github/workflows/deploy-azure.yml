@@ -1,0 +1,64 @@
+name: Deploy to Azure
+
+# Publishes the code to a library that already exists (created once with `./scripts/deploy.sh init`).
+# Runs only when someone with write access starts it, or when a release calls it. It never runs for
+# pull requests. docs/CI-CD.md describes the one-time setup.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never cut one off half-way.
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to Azure
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The `azure` environment holds the three identifiers below and can require an approval.
+    environment: azure
+    permissions:
+      contents: read
+      id-token: write # Lets Azure verify this run. No password or key is stored anywhere.
+    env:
+      LIBRARY_RESOURCE_GROUP: ${{ vars.LIBRARY_RESOURCE_GROUP || 'pince-rg' }}
+      LIBRARY_LOCATION: ${{ vars.LIBRARY_LOCATION || 'westeurope' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - name: Install
+        run: npm run setup
+      - name: Tests
+        run: npm test
+      - name: Install the Static Web Apps CLI
+        run: npm install --global @azure/static-web-apps-cli@2.1.0
+      - name: Sign in to Azure
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Keep this deployment's names out of the public log
+        run: |
+          # The log of a public repository can be read by anyone. Blank the subscription's name and the
+          # names and addresses of the library's own resources wherever a later step prints them.
+          mask() { while IFS= read -r value; do if [ "${#value}" -ge 8 ]; then echo "::add-mask::$value"; fi; done; }
+          az account show --query name -o tsv | mask
+          az resource list --resource-group "$LIBRARY_RESOURCE_GROUP" --query '[].name' -o tsv | mask
+          az staticwebapp list --resource-group "$LIBRARY_RESOURCE_GROUP" --query '[].defaultHostname' -o tsv | mask
+          az functionapp list --resource-group "$LIBRARY_RESOURCE_GROUP" --query '[].defaultHostName' -o tsv | mask
+      - name: Publish
+        run: ./scripts/deploy.sh publish

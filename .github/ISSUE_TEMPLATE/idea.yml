@@ -1,0 +1,22 @@
+name: An idea or a question
+description: Suggest a change, or ask how something works
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pince is a small personal project built around one family's library. Ideas that keep it small and easy to run are the most likely to be taken up.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like, and what would it help you do?
+    validations:
+      required: true
+  - type: dropdown
+    id: target
+    attributes:
+      label: Which way of running Pince is this about?
+      options:
+        - Both
+        - On my own computer
+        - On Azure

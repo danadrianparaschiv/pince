@@ -1,0 +1,6 @@
+# Formatting is checked for the test suite. The application code keeps its own compact style for now.
+/*
+!/test
+/test/fixtures
+/test/sample-images
+/test/sample-photos

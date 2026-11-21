@@ -1,0 +1,29 @@
+{
+  "name": "pince",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "setup": "npm ci && npm ci --prefix api",
+    "predev": "node scripts/doctor.mjs --start",
+    "dev": "node scripts/dev.js",
+    "prestart": "node scripts/doctor.mjs --start",
+    "start": "node scripts/dev.js",
+    "doctor": "node scripts/doctor.mjs",
+    "backup": "node scripts/local-backup.mjs backup",
+    "restore": "node scripts/local-backup.mjs restore",
+    "test": "node --import ./test/no-network.js --test \"test/*.test.js\"",
+    "coverage": "node --import ./test/no-network.js --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-coverage-exclude=web/import.js --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 \"test/*.test.js\"",
+    "smoke": "node scripts/smoke-local.mjs",
+    "format": "prettier --write test",
+    "format:check": "prettier --check test",
+    "check": "npm run format:check && npm run coverage"
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  }
+}

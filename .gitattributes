@@ -1,0 +1,6 @@
+# The same line endings on every system: scripts run under Bash, and tests read these files as text.
+* text=auto eol=lf
+*.png binary
+*.webp binary
+*.heic binary
+*.jpg binary

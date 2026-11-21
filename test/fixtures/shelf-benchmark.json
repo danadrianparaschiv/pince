@@ -1,0 +1,44 @@
+{
+  "scope": "Hand-read titles in three upright JPEG crops of the supplied photos. Each label refers to one physical book. Unreadable and clipped edge titles are outside the scored sample. Capitalization and punctuation can vary. Preserve Romanian diacritics. No edition publication date is visible for these labels.",
+  "images": [
+    {
+      "file": "IMG_4968", "cropPixels": [355, 2010, 1541, 1986],
+      "books": [
+        {"title":"Călătorie pe Lună","series":"Portalul magic","authors":"Mary Pope Osborne"},
+        {"title":"The Goat Who Ate Everything"},
+        {"title":"Pooh’s Little Instruction Book","publisher":"Methuen"},
+        {"title":"Miffy","authors":"Dick Bruna","publisher":"Simon and Schuster"},
+        {"title":"Miffy at School","authors":"Dick Bruna","publisher":"Simon and Schuster"}
+      ]
+    },
+    {
+      "file": "IMG_4970", "cropPixels": [1096, 926, 2384, 4276],
+      "books": [
+        {"title":"Munții","series":"O lume a minunilor"},
+        {"title":"Ce se întâmplă noaptea","authors":"Laura Cowan"},
+        {"title":"Viața secretă a albinelor","visibleCredits":"Moira Butterfield • Vivian Mineker"},
+        {"title":"Cum trăiesc și unde locuiesc animalele"},
+        {"title":"Florile","authors":"Emily Bone"},
+        {"title":"Insectele","authors":"Emily Bone"},
+        {"title":"O istorie a imaginilor pentru copii","authors":"David Hockney, Martin Gayford"},
+        {"title":"Prima mea enciclopedie de istorie"},
+        {"title":"365 de construcții LEGO"},
+        {"title":"Experimentăm și descoperim","series":"De ce? De ce? De ce?","volume":"9","publisher":"Casa"},
+        {"title":"Cum funcționează?","series":"De ce? De ce? De ce?","volume":"8","publisher":"Casa"}
+      ]
+    },
+    {
+      "file": "IMG_4971", "cropPixels": [1529, 1900, 1549, 2924],
+      "books": [
+        {"title":"Știința pe înțelesul copiilor","series":"STEM"},
+        {"title":"Corpul omenesc","series":"Enciclopedia micilor curioși","publisher":"RAO"},
+        {"title":"Prima enciclopedie Larousse","publisher":"RAO"},
+        {"title":"Ferma","series":"Enciclopedia micilor curioși","publisher":"RAO"},
+        {"title":"Prima mea carte cu personaje","publisher":"RAO"},
+        {"title":"Uimitorul cosmos","series":"Micii exploratori","publisher":"Gama"},
+        {"title":"Când voi fi mare...","series":"Micii exploratori","publisher":"Gama"},
+        {"title":"Cum văd eu?"}
+      ]
+    }
+  ]
+}
