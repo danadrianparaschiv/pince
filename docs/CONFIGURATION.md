@@ -44,7 +44,7 @@ The endpoints are checked before use: the model endpoint must be an HTTPS addres
 
 ## The deployed site and worker
 
-`./scripts/deploy.sh` reads the deployment settings listed in [DEPLOY.md](../DEPLOY.md#deployment-settings) from your environment and asks for the two passwords with hidden input. The Bicep templates in `infra/` then set the app settings below. You do not edit them by hand.
+`./scripts/deploy.sh setup` asks for the deployment settings one question at a time. `init` reads the same settings, listed in [DEPLOY.md](../DEPLOY.md#deployment-settings), from your environment and asks only for the two passwords. Both take the passwords with hidden input. The Bicep templates in `infra/` then set the app settings below. You do not edit them by hand.
 
 **Site (API)**
 
@@ -52,7 +52,7 @@ The endpoints are checked before use: the model endpoint must be an HTTPS addres
 | --- | --- |
 | `AZURE_STORAGE_CONNECTION_STRING` | The library's own storage account, read by the template at deployment |
 | `PUBLIC_APP_ORIGIN` | The site's HTTPS address |
-| `PARENT_USERNAME`, `CHILD_USERNAME`, `BOOTSTRAP_PARENT_PASSWORD`, `BOOTSTRAP_CHILD_PASSWORD` | Your environment or the hidden prompts |
+| `PARENT_USERNAME`, `CHILD_USERNAME`, `BOOTSTRAP_PARENT_PASSWORD`, `BOOTSTRAP_CHILD_PASSWORD` | Your answers in `setup`, or your environment and the hidden prompts of `init` |
 | `AZURE_OPENAI_*` | The model resource created by `init --with-vision` |
 | `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY` | The library's free-tier Vision account, set by the template, or by `scripts/sync-vision-key.mjs` for a library created before that account existed |
 | `GOOGLE_BOOKS_API_KEY` | Copied from the worker by `scripts/sync-review-key.mjs` |
@@ -64,27 +64,23 @@ The endpoints are checked before use: the model endpoint must be an HTTPS addres
 | --- | --- |
 | `COVER_QUEUE_URL`, `AZURE_CLIENT_ID` | The template. The worker reads its queue with a managed identity, not a key |
 | `LIBRARY_API_ORIGIN` | The site's HTTPS address |
-| `GOOGLE_BOOKS_API_KEY` | `scripts/set-google-books-key.mjs` |
-| `BRAVE_SEARCH_API_KEY` | `scripts/set-brave-search-key.mjs` |
+| `GOOGLE_BOOKS_API_KEY` | `./scripts/deploy.sh keys` |
+| `BRAVE_SEARCH_API_KEY` | `./scripts/deploy.sh keys` |
 
 `publish` keeps both worker keys when it redeploys.
 
 ## Storing a service key
 
-Both scripts check the key with one test request before storing it, and change nothing if the check fails.
-
-Brave Search asks for the key with hidden input:
-
 ```sh
-node scripts/set-brave-search-key.mjs
+./scripts/deploy.sh keys
 ```
 
-Google Books reads the key from standard input:
+It asks for the Google Books key and then the Brave Search key, with hidden input; press Enter alone to leave one as it is. Each key is checked with one test request before it is stored, and nothing changes if the check fails. `setup` ends with the same two questions.
+
+The command hands each key to its own script on standard input: `scripts/set-google-books-key.mjs` and `scripts/set-brave-search-key.mjs`. To store a key from a secret store without typing it, pipe it to that script yourself:
 
 ```sh
-read -r -s GOOGLE_KEY
 printf '%s' "$GOOGLE_KEY" | node scripts/set-google-books-key.mjs
-unset GOOGLE_KEY
 ```
 
 [DEPLOY.md](../DEPLOY.md#automatic-cover-suggestions) explains how to create each key, what each service costs, and the request limits the library keeps.

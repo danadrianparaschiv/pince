@@ -10,10 +10,12 @@ mode="${1:-help}"
 usage() {
   cat <<'USAGE'
 Usage:
+  ./scripts/deploy.sh setup                     Guided first deployment: answer the questions, then it creates the library
   ./scripts/deploy.sh init [--with-vision]       Provision resources and deploy the app
   ./scripts/deploy.sh publish                   Deploy code to the existing library
   ./scripts/deploy.sh budgets                   Configure group-scoped email alerts
   ./scripts/deploy.sh covers                    Provision and publish the background cover worker
+  ./scripts/deploy.sh keys                      Add or replace the optional Google Books and Brave keys
   ./scripts/deploy.sh package NEW_DIRECTORY     Prepare web and Linux x64 API artifacts locally
   ./scripts/deploy.sh doctor                    Check this computer and your Azure sign-in before deploying
   ./scripts/deploy.sh status                    Show what is deployed and which optional services are set
@@ -25,7 +27,7 @@ fail() { printf '%s\n' "$*" >&2; exit 1; }
 case "$mode" in
   help|-h|--help) usage; exit 0 ;;
   init) [[ $# -eq 1 || ( $# -eq 2 && $2 == '--with-vision' ) ]] || { usage; exit 2; } ;;
-  publish|budgets|covers|doctor|status|destroy) [[ $# -eq 1 ]] || { usage; exit 2; } ;;
+  setup|keys|publish|budgets|covers|doctor|status|destroy) [[ $# -eq 1 ]] || { usage; exit 2; } ;;
   package) [[ $# -eq 2 && -n $2 && ! -e $2 ]] || fail 'Supply a new package directory.' ;;
   *) usage; exit 2 ;;
 esac
@@ -43,8 +45,9 @@ bicep_problem() {
 }
 
 # Reports every problem at once instead of stopping at the first, and changes nothing.
+# `doctor tools` leaves out the look at the resource group, which setup asks about itself.
 doctor() {
-  local problems=0
+  local problems=0 scope="${1:-all}"
   ok() { printf ' ok  %s\n' "$*"; }
   bad() { printf ' !!  %s\n' "$*"; problems=$((problems + 1)); }
   note() { printf '  -  %s\n' "$*"; }
@@ -68,14 +71,15 @@ doctor() {
     if [[ -z $bicep ]]; then ok 'Bicep'; else bad "$bicep"; fi
     if subscription="$(az account show --query name -o tsv 2>/dev/null)" && [[ -n $subscription ]]; then
       ok "Signed in to Azure; subscription: $subscription"
-      if [[ $(az group exists --name "$group" 2>/dev/null) == true ]]; then
+      if [[ $scope == tools ]]; then :
+      elif [[ $(az group exists --name "$group" 2>/dev/null) == true ]]; then
         if az deployment group show --resource-group "$group" --name pince-infra --query name -o tsv >/dev/null 2>&1; then
           note "A library exists in $group. Update it with: ./scripts/deploy.sh publish"
         else
           bad "The resource group $group exists but holds no library. Choose another name with LIBRARY_RESOURCE_GROUP."
         fi
       else
-        note "No library in $group yet. Create one with: ./scripts/deploy.sh init"
+        note "No library in $group yet. Create one with: ./scripts/deploy.sh setup"
       fi
     else
       bad 'Not signed in to Azure: az login'
@@ -88,7 +92,8 @@ doctor() {
 }
 if [[ $mode == doctor ]]; then doctor; exit $?; fi
 
-if [[ $mode != package ]]; then
+# Setup starts with the doctor, which says the same things with their fixes.
+if [[ $mode != package && $mode != setup ]]; then
   command -v az >/dev/null || fail 'Install Azure CLI and run az login.'
   az account show --query '{subscription:name,id:id}' -o table
 fi
@@ -106,7 +111,7 @@ library_exists() {
 
 # What is deployed. Settings are shown as set or not set, never by value.
 status() {
-  library_exists || { printf 'There is no library in %s. Create one with: ./scripts/deploy.sh init\n' "$group"; return 0; }
+  library_exists || { printf 'There is no library in %s. Create one with: ./scripts/deploy.sh setup\n' "$group"; return 0; }
   local site hostname worker
   site="$(az deployment group show --resource-group "$group" --name pince-infra --query properties.outputs.siteName.value -o tsv)"
   hostname="$(az staticwebapp show --name "$site" --resource-group "$group" --query defaultHostname -o tsv)"
@@ -174,6 +179,178 @@ budget_alerts() {
 }
 if [[ $mode == budgets ]]; then budget_alerts; exit 0; fi
 
+# Questions, for setup and keys. The question is printed here and not by `read -p`, which says
+# nothing unless a terminal is attached. Input that ends is never taken for an answer.
+no_answer() { fail $'\nNo answer was received, so the script stopped here.'; }
+# The caller's variable is set by name, so the names used inside must not be a caller's.
+ask() { # ask VARIABLE 'Question' ['answer used for an empty reply']
+  local _typed
+  printf '%s%s: ' "$2" "${3:+ [$3]}"
+  IFS= read -r _typed || no_answer
+  [[ -t 0 ]] || printf '\n'
+  _typed="${_typed#"${_typed%%[![:space:]]*}"}"
+  _typed="${_typed%"${_typed##*[![:space:]]}"}"
+  printf -v "$1" '%s' "${_typed:-${3:-}}"
+}
+ask_hidden() { # Typed or pasted without being shown.
+  local _typed
+  printf '%s: ' "$2"
+  IFS= read -r -s _typed || no_answer
+  printf '\n'
+  printf -v "$1" '%s' "$_typed"
+}
+agree() { # Yes only when said; an empty reply is no.
+  local reply
+  while true; do
+    ask reply "$1 [y/N]"
+    case "$reply" in
+      [Yy]|[Yy][Ee][Ss]) return 0 ;;
+      ''|[Nn]|[Nn][Oo]) return 1 ;;
+    esac
+    printf 'Answer y or n.\n'
+  done
+}
+
+# The two optional keys of the cover lookups. Each is typed or pasted unseen and handed to its own
+# script on standard input, which tries it with one request and stores it only if that works.
+# A key is never a command argument.
+offer_key() { # offer_key 'Service' its-script.mjs
+  local key
+  while true; do
+    ask_hidden key "$1 API key (hidden; press Enter alone to skip)"
+    if [[ -z $key ]]; then printf '  -  %s: skipped, nothing was changed.\n' "$1"; return 0; fi
+    if printf '%s' "$key" | LIBRARY_RESOURCE_GROUP="$group" node "$root/scripts/$2"; then return 0; fi
+    if ! agree "Try another $1 key?"; then printf '  -  %s: skipped.\n' "$1"; return 0; fi
+  done
+}
+service_keys() {
+  printf '\nOptional keys for finding covers. Add or replace them at any time with: ./scripts/deploy.sh keys\n\n'
+  printf 'Google Books is a second catalogue for title checks and covers, after Open Library.\nCreate a key restricted to the Books API in Google Cloud; lookups need no billing.\n'
+  offer_key 'Google Books' set-google-books-key.mjs
+  printf '\nBrave image search finds covers of Romanian editions on bookshop and publisher pages.\nCreate a key at https://brave.com/search/api/; trying it uses one search of the monthly credit.\n'
+  offer_key 'Brave Search' set-brave-search-key.mjs
+}
+if [[ $mode == keys ]]; then
+  library_exists || fail "There is no library in $group. Create one with: ./scripts/deploy.sh setup"
+  service_keys
+  exit 0
+fi
+
+choose_subscription() {
+  local list count=0 current=1 choice name id selected
+  list="$(az account list --query '[].[name,id,isDefault]' -o tsv)"
+  count="$(printf '%s\n' "$list" | grep -c . || true)"
+  if [[ $count -le 1 ]]; then return 0; fi
+  printf 'Your Azure subscriptions:\n'
+  count=0
+  while IFS=$'\t' read -r name id selected; do
+    [[ -n $name ]] || continue
+    count=$((count + 1))
+    if [[ $selected == [Tt]rue ]]; then current=$count; printf '  %d. %s (selected)\n' "$count" "$name"
+    else printf '  %d. %s\n' "$count" "$name"; fi
+  done <<< "$list"
+  while true; do
+    ask choice 'Number of the subscription for the library' "$current"
+    if [[ $choice =~ ^[1-9][0-9]{0,3}$ ]] && [[ $choice -le $count ]]; then break; fi
+    printf 'Answer with a number from 1 to %d.\n' "$count"
+  done
+  if [[ $choice -ne $current ]]; then
+    id="$(printf '%s\n' "$list" | grep . | sed -n "${choice}p" | cut -f2)"
+    az account set --subscription "$id" --only-show-errors
+    printf 'Azure commands on this computer now use that subscription.\n'
+  fi
+}
+choose_password() { # choose_password VARIABLE parent|child
+  local first again
+  while true; do
+    ask_hidden first "Password for the $2 account (10-128 characters, hidden)"
+    if [[ ${#first} -lt 10 || ${#first} -gt 128 ]]; then printf 'A password needs 10 to 128 characters.\n'; continue; fi
+    ask_hidden again 'The same password again'
+    if [[ $first == "$again" ]]; then break; fi
+    printf 'The two did not match. Start again.\n'
+  done
+  printf -v "$1" '%s' "$first"
+}
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# Asks for everything `init` needs, in order, and creates nothing itself: with every answer in
+# place and a yes to the last question, the script carries on exactly as `init` does.
+with_vision=0
+guided_setup() {
+  local group_rule='^[A-Za-z0-9._()-]{1,90}$' name_rule='^[a-zA-Z0-9_.-]{1,48}$' email_rule='^[^@[:space:]]+@[^@[:space:]]+$'
+  local state parent child email offered_group="$group" offered_location="$location"
+  printf 'Set-up of a Pince library on Azure. Nothing is created before you confirm at the end.\n\n'
+  doctor tools || fail 'Fix what is listed above, then run setup again.'
+  printf '\n'
+  choose_subscription
+  while true; do
+    ask group 'Resource group for the library' "$offered_group"
+    if ! [[ $group =~ $group_rule ]] || [[ $group == *. ]]; then
+      printf 'Use 1 to 90 letters, digits, dashes, dots, underscores or parentheses, not ending in a dot.\n'; continue
+    fi
+    if [[ $(az group exists --name "$group") != true ]]; then break; fi
+    if library_exists; then
+      state="$(az deployment group show --resource-group "$group" --name pince-infra --query properties.provisioningState -o tsv)"
+      if [[ $state == Succeeded ]]; then
+        printf '\nA library already exists in %s, so nothing new is created.\nTo publish the code again: ./scripts/deploy.sh publish. To see what is deployed: ./scripts/deploy.sh status\n' "$group"
+        service_keys
+        exit 0
+      fi
+      printf 'An earlier attempt to create a library in %s did not finish. Set-up tries again there.\n' "$group"
+      break
+    fi
+    if [[ $(az resource list --resource-group "$group" --query 'length(@)' -o tsv) == 0 ]]; then
+      printf 'The resource group %s exists and is empty. The library goes there.\n' "$group"
+      break
+    fi
+    printf 'The resource group %s exists and holds something else. Choose another name.\n' "$group"
+  done
+  while true; do
+    ask location 'Azure region for the site and its storage' "$offered_location"
+    if [[ $location =~ ^[a-z0-9]+$ ]]; then break; fi
+    printf 'Give the region by its short name, such as westeurope.\n'
+  done
+  while true; do
+    ask parent 'Name of the parent account' "${PARENT_USERNAME:-parinte}"
+    ask child 'Name of the child account' "${CHILD_USERNAME:-copil}"
+    if ! [[ $parent =~ $name_rule && $child =~ $name_rule ]]; then
+      printf 'An account name is 1 to 48 letters, digits, dashes, dots or underscores, without accents.\n'
+    elif [[ $(lower "$parent") == "$(lower "$child")" ]]; then
+      printf 'Choose two different account names.\n'
+    else break; fi
+  done
+  PARENT_USERNAME="$parent" CHILD_USERNAME="$child"
+  if [[ -n ${BOOTSTRAP_PARENT_PASSWORD:-} ]]; then printf 'The parent password is taken from BOOTSTRAP_PARENT_PASSWORD.\n'
+  else choose_password BOOTSTRAP_PARENT_PASSWORD parent; fi
+  if [[ -n ${BOOTSTRAP_CHILD_PASSWORD:-} ]]; then printf 'The child password is taken from BOOTSTRAP_CHILD_PASSWORD.\n'
+  else choose_password BOOTSTRAP_CHILD_PASSWORD child; fi
+  # shellcheck disable=SC2016
+  printf '\nPhoto recognition reads titles from a photo of a cover or a shelf, with a pay-per-use model\nin your subscription: less than a cent a scan, and the library stops at $1.50 a month. It stays off\nuntil the parent switches it on in Family settings. Without it you type titles and upload covers.\n'
+  if agree 'Add photo recognition?'; then with_vision=1; fi
+  while true; do
+    ask email 'Email address for Azure cost alerts (Enter alone for none)' "${BUDGET_EMAIL:-}"
+    if [[ -z $email || $email =~ $email_rule ]]; then break; fi
+    printf 'That does not look like an email address.\n'
+  done
+  BUDGET_EMAIL="$email"
+  printf '\nReady to create:\n'
+  printf '  Subscription:       %s\n' "$(az account show --query name -o tsv)"
+  printf '  Resource group:     %s, in %s\n' "$group" "$location"
+  printf '  Accounts:           %s (parent) and %s (child)\n' "$parent" "$child"
+  if [[ $with_vision == 1 ]]; then printf '  Photo recognition:  yes, in %s\n' "${VISION_LOCATION:-swedencentral}"
+  else printf '  Photo recognition:  no\n'; fi
+  printf '  Cost alerts:        %s\n\n' "${email:-none}"
+  printf 'Creating the library takes six to seven minutes. DEPLOY.md explains what a month costs.\n'
+  if ! agree 'Create the library now?'; then printf 'Nothing was created.\n'; exit 0; fi
+}
+guided=0
+if [[ $mode == setup ]]; then
+  guided_setup
+  # From here on this is `init` with the answers above.
+  mode=init guided=1
+  if [[ $with_vision == 1 ]]; then set -- init --with-vision; else set -- init; fi
+fi
+
 for tool in node npm; do command -v "$tool" >/dev/null || fail 'Install Node 22 and npm 10.3 or newer.'; done
 node -e 'if (+process.versions.node.split(".")[0] !== 22) process.exit(1)' || fail 'Use Node 22 for this deployment.'
 node -e 'const [major,minor] = process.argv[1].split(".").map(Number); if (!(major > 10 || (major === 10 && minor >= 3))) process.exit(1)' "$(npm --version)" || fail 'Use npm 10.3 or newer for Linux dependency selection.'
@@ -182,7 +359,14 @@ if [[ $mode != package ]]; then
   node -e 'const [major,minor] = process.argv[1].trim().split(".").map(Number); if (!(major > 2 || (major === 2 && minor >= 1))) process.exit(1)' "$(swa --version)" || fail 'Upgrade Static Web Apps CLI to 2.1.0 or newer for the Node 22 runtime.'
 fi
 stage="$(mktemp -d)"
-trap 'rm -rf -- "$stage"' EXIT
+finish() {
+  local code=$?
+  rm -rf -- "$stage"
+  if [[ $guided == 1 && $code -ne 0 ]]; then
+    printf '\nSet-up stopped before the library was ready. When the cause above is fixed, run\n./scripts/deploy.sh setup again with the same resource group; it says how to carry on.\n' >&2
+  fi
+}
+trap finish EXIT
 mkdir -p "$stage/api" "$stage/web"
 cp -R "$root/web/." "$stage/web/"
 cp -R "$root/api/src" "$root/api/package.json" "$root/api/package-lock.json" "$root/api/host.json" "$stage/api/"
@@ -339,5 +523,14 @@ hostname="$(az staticwebapp show --name "$site" --resource-group "$group" --quer
   swa --verbose log deploy ./web --app-location . --swa-config-location ./web --api-location ./api --api-language node --api-version 22 --env production
 )
 node "$root/scripts/deploy-check.mjs" "https://$hostname" "$release"
-if [[ $mode == init && -n ${BUDGET_EMAIL:-} ]]; then budget_alerts; fi
+if [[ $mode == init && -n ${BUDGET_EMAIL:-} ]]; then
+  if [[ $guided == 1 ]]; then
+    # A subscription that cannot hold budgets yet must not undo a library that is already live.
+    budget_alerts || printf 'The cost alerts could not be created. The library works without them; try later with: BUDGET_EMAIL=... ./scripts/deploy.sh budgets\n'
+  else budget_alerts; fi
+fi
 printf 'Library URL: https://%s\n' "$hostname"
+if [[ $guided == 1 ]]; then
+  service_keys
+  printf '\nThe library is ready at https://%s\nSign in as %s with the parent password you chose, and keep both passwords in your password manager.\n' "$hostname" "$PARENT_USERNAME"
+fi

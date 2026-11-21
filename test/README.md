@@ -32,7 +32,7 @@ The tests use Node's built-in runner and assertions. There is no test framework 
 | `local.test.js`                                 | Running on a computer: the settings file, the health check, backup and restore from the command line                                      |
 | `setup.test.js`                                 | Setting up a local library in the browser: the one-time link, choosing the accounts, checking and saving service keys                     |
 | `network.test.js`                               | A local library that other devices reach: where it listens, the address people open, proxies, the pages' browser policy, stopping cleanly |
-| `deploy-script.test.js`                         | The deployment script's `doctor`, `status` and `destroy`, against a stand-in for the Azure CLI                                            |
+| `deploy-script.test.js`                         | The deployment script's `setup`, `keys`, `doctor`, `status` and `destroy`, against a stand-in for the Azure CLI                           |
 | `repository.test.js`                            | The repository itself: nothing private in it, documentation that matches the code                                                         |
 
 `helpers.js` holds what the files share: a temporary store, a running copy of the API, and test pictures. Real photos are not part of the repository: keep your own in `sample-photos/` or `sample-images/`, which git ignores, for trying the photo methods by hand. `fixtures/` holds recorded data: hand-read labels for three shelf photos and a text detector's answer for one of them.
@@ -53,7 +53,7 @@ The tests use Node's built-in runner and assertions. There is no test framework 
 Two things are deliberately outside them:
 
 - **The browser screens** (`web/app.js`, `web/import.js`, `web/parent.js`, `web/setup.js`, `web/services.js`) are not run by the tests. Their logic that can be a pure function lives in `web/strings.js` or is exported (photo tiling, cover placement) and is tested; the screens themselves are checked by hand in a browser.
-- **The deployment scripts** in `scripts/` and the templates in `infra/` are exercised by deploying. `deploy.sh` runs its own checks against the published site.
+- **The deployment scripts** in `scripts/` and the templates in `infra/` are exercised by deploying. The tests cover what `deploy.sh` asks and what it hands to the Azure CLI, up to the point where resources would be created; publishing itself is not run. `deploy.sh` runs its own checks against the published site.
 
 ## Adding a test
 

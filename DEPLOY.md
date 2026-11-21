@@ -13,18 +13,31 @@ npm install --global @azure/static-web-apps-cli@2.1.0
 az bicep install
 az login
 az account set --subscription 'YOUR_SUBSCRIPTION_ID'
-./scripts/deploy.sh init --with-vision
+./scripts/deploy.sh setup
 ```
 
 On a minimal Linux, such as a container or a fresh server, Bicep installs but cannot start until the ICU library is present. `doctor` says so; on Ubuntu or Debian the fix is `sudo apt-get install libicu-dev`.
 
-The command stages dependencies for Azure’s Linux x64 runtime, asks for two passwords with hidden input, provisions the resources, and publishes the app. The usernames default to **parinte** and **copil**. Keep both passwords in your password manager. The script prints the HTTPS address after verifying the release, anonymous access rules, and a parent sign-in through the deployed proxy. A real model call is made only when a signed-in user explicitly requests recognition and the parent has enabled it.
+`setup` runs the `doctor` checks and then asks, one question at a time, for everything the deployment needs:
 
-For a deployment with manual entry and photo uploads only, run `./scripts/deploy.sh init`. To add recognition later, rerun `init --with-vision` with the same group and usernames. Use the current parent password for the sign-in check. Existing account records retain passwords set in the app. Use `publish` for routine code updates.
+1. the subscription, when your sign-in has more than one. Choosing another one changes the subscription the Azure CLI uses on this computer;
+2. the resource group and the region;
+3. the names of the parent and child accounts, **parinte** and **copil** unless you type others;
+4. a password for each account, typed twice without being shown;
+5. whether to add photo recognition;
+6. an email address for cost alerts, which can be left empty.
+
+It shows a summary and creates nothing until you answer **y**. An empty answer takes the value shown in brackets. If the resource group already holds a finished library, `setup` creates nothing and only offers the optional keys; if an earlier attempt stopped half-way, it tries again in the same group.
+
+After that it does what `init` does: it stages dependencies for Azure’s Linux x64 runtime, provisions the resources, and publishes the app. Last, it offers to store the Google Books and Brave keys described under [Automatic cover suggestions](#automatic-cover-suggestions); press Enter to skip either. Keep both passwords in your password manager. The script prints the HTTPS address after verifying the release, anonymous access rules, and a parent sign-in through the deployed proxy. A real model call is made only when a signed-in user explicitly requests recognition and the parent has enabled it.
+
+`./scripts/deploy.sh init --with-vision` is the same deployment without the questions: it reads the [deployment settings](#deployment-settings) from your environment and asks only for the two passwords. Use it for an unattended deployment, or to change an existing one. For a deployment with manual entry and photo uploads only, run `./scripts/deploy.sh init`. To add recognition later, rerun `init --with-vision` with the same group and usernames. Use the current parent password for the sign-in check. Existing account records retain passwords set in the app. Use `publish` for routine code updates.
 
 The default resource group is `pince-rg` in West Europe. The optional vision account is in Sweden Central and deploys `gpt-5-mini` version `2025-08-07` with the **Global Standard** SKU. Your subscription needs Global Standard quota for that model in the selected AI region. A quota or region rejection can be addressed by choosing an available `VISION_LOCATION` and rerunning, or running `init` to use manual entry. Microsoft currently schedules this model version for retirement on 13 July 2027. Before then, verify a replacement on a family shelf photo and update the deployment, the token rates and reservation in `api/src/scans.js`, and its budget tests together. [Microsoft model regions](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/models) · [Model lifecycle](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule)
 
 ## Deployment settings
+
+`setup` asks for the resource group, the region, the account names, the passwords and the alert address, and offers a value already set in your environment as the default. A password set in the environment is used without asking. The other rows are read from the environment by `setup` and `init` alike.
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
@@ -32,10 +45,10 @@ The default resource group is `pince-rg` in West Europe. The optional vision acc
 | `LIBRARY_LOCATION` | `westeurope` | Region for the site and storage. Choose a region that supports Static Web Apps. |
 | `VISION_LOCATION` | `swedencentral` | Region for optional Azure OpenAI quota. |
 | `PARENT_USERNAME`, `CHILD_USERNAME` | `parinte`, `copil` | Different account names, 1–48 ASCII letters, digits, dots, dashes, or underscores. |
-| `BOOTSTRAP_PARENT_PASSWORD`, `BOOTSTRAP_CHILD_PASSWORD` | Prompted at `init` | 10–128 characters. For unattended setup, inject from your CI secret store. Bicep receives secure parameters through standard input. |
+| `BOOTSTRAP_PARENT_PASSWORD`, `BOOTSTRAP_CHILD_PASSWORD` | Prompted at `setup` and `init` | 10–128 characters. For unattended setup, inject from your CI secret store. Bicep receives secure parameters through standard input. |
 | `AZURE_MONTHLY_RESERVE_USD` | `0.60` | Monthly estimate of non-model Azure costs before tax. Update against actual resource-group charges. |
 | `TAX_MULTIPLIER` | `1.25` | Allowance for tax and exchange-rate variation, applied to USD estimates. Set for your bill. |
-| `BUDGET_EMAIL` | Optional | Recipient of resource-group cost alerts. Supplying it to `init` creates both monthly and annual budgets. |
+| `BUDGET_EMAIL` | Optional | Recipient of resource-group cost alerts. Supplying it to `init`, or answering the question in `setup`, creates both monthly and annual budgets. |
 | `MONTHLY_BILLING_BUDGET`, `ANNUAL_BILLING_BUDGET` | `3`, `30` | Amounts in the **Azure billing currency** for alerts; decimals such as `2.10` are accepted. Allow for tax and exchange rates when setting pre-tax budgets. The app tracks its own limits in USD. |
 
 With `--with-vision` the template also creates a free-tier (F0) Azure AI Vision account in the site's region and sets `AZURE_VISION_ENDPOINT` and `AZURE_VISION_KEY`. Each shelf scan sends one copy of the photo, at most 2,048 pixels on its long edge, to its text detector to find where each title is printed; single covers are not sent. A photo of several front covers is sent the same way, and each cover's edges are then found on the server from its title's place and the colour of the surface around it; that photo is not stored. The free tier allows 5,000 reads a month at 20 a minute and cannot bill, so these reads are outside the scan budget; if the tier is ever changed to a paid one, add a cost hold in `api/src/scans.js` first. A subscription can hold only one free Vision account. When the detector is missing, over its limit or slow, the scan still completes and the rows just have no cut-out. `publish` copies the endpoint and key of an existing `pince-ocr-*` account into the site settings, so a library created before this feature needs no re-provisioning.
@@ -71,7 +84,7 @@ The alert fires at 75% of each budget. Azure evaluates the group’s costs after
 ./scripts/deploy.sh doctor
 ```
 
-Checks Node, npm, zip, the Static Web Apps CLI, the Azure CLI with Bicep, and your sign-in, and says whether a library already exists in the resource group. It reports every problem at once and creates nothing.
+Checks Node, npm, zip, the Static Web Apps CLI, the Azure CLI with Bicep, and your sign-in, and says whether a library already exists in the resource group. It reports every problem at once and creates nothing. `setup` starts with the same checks.
 
 ```sh
 ./scripts/deploy.sh status
@@ -125,10 +138,10 @@ Backup format 4 includes the selected cover, up to three alternate covers, sourc
 Enable the Books API in your Google Cloud project and create an API key restricted to **Books API**. Keep it server-side on the cover worker and managed API. To validate and set a key without placing it in shell arguments or command history, run:
 
 ```sh
-read -r -s GOOGLE_KEY
-printf '%s' "$GOOGLE_KEY" | node scripts/set-google-books-key.mjs
-unset GOOGLE_KEY
+./scripts/deploy.sh keys
 ```
+
+It asks for the Google Books key and then for the Brave key below, and shows nothing while you paste; press Enter alone to leave one as it is. Each key is tried with one request and stored only if that request succeeds. `setup` ends with the same two questions. To store the key from a secret store instead, pipe it to the script that `keys` uses: `printf '%s' "$GOOGLE_KEY" | node scripts/set-google-books-key.mjs`.
 
 No Google billing changes are needed for Books API lookup. The secure `GOOGLE_BOOKS_API_KEY` worker setting is preserved by `publish` and `covers`; `publish` synchronizes it to the managed API for photo review. `node scripts/sync-review-key.mjs` synchronizes an already configured worker key without publishing. The frontend never receives it. The deployment script also accepts this environment variable from a secret store. The key goes only to the Google metadata endpoint, never to image hosts, logs or backups.
 
@@ -151,10 +164,10 @@ The worker contacts two hosts only: `api.search.brave.com` and Brave's image pro
 Create a key at [Brave Search API](https://brave.com/search/api/), then validate and store it on the worker without placing it in shell arguments or history:
 
 ```sh
-node scripts/set-brave-search-key.mjs
+./scripts/deploy.sh keys
 ```
 
-The script asks for the key and shows nothing while you paste it; press Enter afterwards. It makes one test search in exactly the shape the worker uses, then sets `BRAVE_SEARCH_API_KEY` on the cover worker. `publish` and `covers` preserve it. For local development, set the same variable before `npm run dev`.
+Press Enter alone at the Google Books question to keep that key as it is, then paste the Brave key; nothing is shown while you paste. `node scripts/set-brave-search-key.mjs` asks for the Brave key only, and also accepts it piped on standard input. It makes one test search in exactly the shape the worker uses, then sets `BRAVE_SEARCH_API_KEY` on the cover worker. `publish` and `covers` preserve it. For local development, set the same variable before `npm run dev`.
 
 Brave charges $5 per 1,000 searches and includes $5 of credit each month (prices read on 19 November 2026). The library stops at 200 searches a day and 900 a month, which keeps a month inside that credit. An authentication or quota error blocks further searches for one hour and is not retried automatically. This cost is outside the Azure budget alerts and the scan budget. Brave's published terms say storing search results needs a custom plan; this library keeps only the chosen picture and the address of the page it was found on, for private family use.
 

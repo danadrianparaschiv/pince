@@ -79,10 +79,10 @@ The log shows the address and a one-time set-up link. The image is published wit
 ## Put it on Azure
 
 ```sh
-./scripts/deploy.sh init --with-vision
+./scripts/deploy.sh setup
 ```
 
-The script creates the resources, asks for the two passwords without showing them, publishes the app and checks the result. Leave out `--with-vision` for a library without photo recognition. `./scripts/deploy.sh doctor` checks the prerequisites first, `status` shows what is deployed, and `destroy` removes it. [Deployment and costs](DEPLOY.md) covers prerequisites, settings, the optional services, budgets and what a month typically costs.
+The script checks this computer, then asks one question at a time: the subscription, the resource group and region, the two account names and their passwords (typed without being shown), whether to add photo recognition, and an address for cost alerts. Nothing is created before you confirm at the end. It then creates the resources, publishes the app, checks the result, and offers to store the two optional keys for cover lookups. `./scripts/deploy.sh init --with-vision` does the same without questions, from settings in your environment. `doctor` checks the prerequisites on its own, `status` shows what is deployed, `keys` adds or replaces the optional keys, and `destroy` removes the library. [Deployment and costs](DEPLOY.md) covers prerequisites, settings, the optional services, budgets and what a month typically costs.
 
 ## Tests
 
