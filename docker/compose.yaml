@@ -1,0 +1,43 @@
+# The library on a home server, behind Caddy, which adds HTTPS. From this folder:
+#
+#   PINCE_HOST=books.example.org docker compose up -d --build
+#   docker compose logs pince        shows the one-time set-up link
+#
+# PINCE_HOST is the name people type to open the library. It must lead to this computer, and
+# ports 80 and 443 must be free. The Caddyfile beside this file says where the certificate
+# comes from. docs/LOCAL.md explains the library's settings.
+services:
+  pince:
+    build: ..
+    restart: unless-stopped
+    environment:
+      # The address browsers open. Changes are accepted only from pages at this address.
+      PUBLIC_APP_ORIGIN: https://${PINCE_HOST:?Set PINCE_HOST to the name the library is opened at}
+      # Caddy is the one proxy in front; it reports the caller's address.
+      LIBRARY_TRUSTED_PROXIES: "1"
+    volumes:
+      - pince-data:/data
+    # No port is published: only Caddy can reach the library.
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - pince
+    environment:
+      PINCE_HOST: ${PINCE_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  # The catalogue, the pictures, and the service keys saved from the app. Treat a copy of it
+  # like a backup that also holds those keys.
+  pince-data:
+  # Caddy's certificates.
+  caddy-data:
+  caddy-config:

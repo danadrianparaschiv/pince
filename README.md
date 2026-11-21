@@ -94,6 +94,7 @@ The tests run offline in a few seconds and cost nothing: every outside service i
 | `worker/` | The background cover worker's entry point; it reuses the lookup code in `api/src/` |
 | `scripts/` | Local server, its set-up screen, health check and backup; Azure deployment; helpers that store service keys |
 | `infra/` | Bicep templates for the Azure resources |
+| `Dockerfile`, `docker/` | A container image of the local library, and a Compose example that puts it behind HTTPS |
 | `test/` | The test suite, its helpers and fixtures; see [the test guide](test/README.md) |
 | `docs/` | User guide, architecture, configuration and the original requirements |
 
@@ -109,6 +110,7 @@ The tests run offline in a few seconds and cost nothing: every outside service i
 
 - [What is supported](docs/SUPPORT.md): the two ways to run Pince, how they differ, and how to get help
 - [Running locally](docs/LOCAL.md): install, settings, backups, upgrades, troubleshooting
+- [Running in a container](docs/DOCKER.md): building the image, a home server with HTTPS, data, upgrades
 - [User guide](docs/USER-GUIDE.md): adding books, covers, sharing, filters, family settings
 - [Architecture](docs/ARCHITECTURE.md): parts, data, API, photo and cover pipelines
 - [Configuration](docs/CONFIGURATION.md): every setting, and where secrets are kept

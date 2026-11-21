@@ -1,0 +1,12 @@
+# Proposes a pull request when the container image's base has a newer build. That is how the
+# image gets security fixes for its operating system and for Node.js. A newer major version of
+# Node.js is not proposed: the project is built and tested on one version.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']

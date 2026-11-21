@@ -25,6 +25,13 @@ Windows runs every time but does not block a merge yet. Once it has passed for a
 3. builds the three Bicep templates;
 4. builds the package that would be deployed, with the Linux image libraries Azure needs.
 
+**The container image**, with Docker and nothing else:
+
+1. builds the image from the `Dockerfile`;
+2. checks that only the library's own files are in it;
+3. starts a container and uses it, with the same steps as for the local library, and checks that it reports itself healthy, does not run as root, and stops cleanly;
+4. checks that the Compose example is valid.
+
 You can run the same checks on your computer:
 
 ```sh
@@ -33,6 +40,8 @@ npm run check
 npm run smoke
 shellcheck scripts/deploy.sh
 ./scripts/deploy.sh package /tmp/pince-package
+docker build -t pince .
+SMOKE_IMAGE=pince npm run smoke
 ```
 
 ## Releasing

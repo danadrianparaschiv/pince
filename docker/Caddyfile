@@ -1,0 +1,9 @@
+# When PINCE_HOST is a public name that leads to this computer, Caddy gets a certificate for it
+# and renews it without further set-up.
+#
+# For a name that exists only on your home network, add the line `tls internal` inside the
+# braces. Caddy then signs the certificate itself, and every device has to be told once to
+# trust Caddy's root certificate.
+{$PINCE_HOST} {
+	reverse_proxy pince:46173
+}
