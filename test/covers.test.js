@@ -229,7 +229,9 @@ test('official archive redirects are allowed; off-site redirects are rejected be
         });
       if (url.includes('/works/OL2W.json')) return Response.json({ covers: [1, 2] });
       const archive = legacy ? 'olcovers638/olcovers638-L.zip' : 'l_covers_0001/l_covers_0001_01.zip';
-      if (url.startsWith('https://covers.openlibrary.org'))
+      // The stand-in answers for exactly these hosts, as the real ones would.
+      const host = new URL(url).hostname;
+      if (host === 'covers.openlibrary.org')
         return new Response(null, {
           status: 302,
           headers: {
@@ -242,7 +244,7 @@ test('official archive redirects are allowed; off-site redirects are rejected be
                 '-L.jpg',
           },
         });
-      if (url.startsWith('https://archive.org'))
+      if (host === 'archive.org')
         return new Response(null, {
           status: 302,
           headers: {

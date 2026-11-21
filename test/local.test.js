@@ -43,10 +43,7 @@ test('settings come from .env unless the shell already has them, and an empty li
 test('the wrong version of Node is explained in words', () => {
   assert.equal(nodeProblem('22.19.0'), null);
   for (const version of ['20.11.1', '24.1.0', '18.0.0'])
-    assert.match(
-      nodeProblem(version),
-      new RegExp('needs Node\\.js 22; this is Node\\.js ' + version.replace(/\./g, '\\.')),
-    );
+    assert(nodeProblem(version).includes('needs Node.js 22; this is Node.js ' + version), version);
 });
 
 test('the health check passes on a working computer and never prints a key', async (t) => {

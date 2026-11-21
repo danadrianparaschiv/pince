@@ -86,7 +86,7 @@ test('unavailable or unrelated catalogs stay unverified and fallback redirects f
       blocked = reason;
     },
     fetcher: async (url, options) => {
-      if (url.startsWith('https://www.googleapis.com')) return new Response(null, { status: 429 });
+      if (new URL(url).hostname === 'www.googleapis.com') return new Response(null, { status: 429 });
       assert.equal(options.redirect, 'error');
       return Response.json({
         docs: [{ key: '/works/OL1W', title: 'Unrelated', author_name: ['Roald Dahl'] }],
@@ -255,7 +255,7 @@ test('catalog suggestions bind publisher and publication date to the chosen edit
       ...options,
       apiKey: 'key',
       fetcher: async (url) => {
-        if (!url.startsWith('https://www.googleapis.com')) return Response.json({ docs: [] });
+        if (new URL(url).hostname !== 'www.googleapis.com') return Response.json({ docs: [] });
         assert.match(new URL(url).searchParams.get('q'), /Ferma.*micilor curioși/);
         return Response.json({
           items: [
