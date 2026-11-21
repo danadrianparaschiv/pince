@@ -32,7 +32,8 @@ The deploy script has not yet been rehearsed on WSL, nor in a subscription that 
 
 ## What is not supported
 
-- Other clouds or hosting services, and Docker images.
+- Other clouds or hosting services.
+- A published container image. The repository can build one, and every change builds it and tries it, but none is published and its use on a home server is not rehearsed; see [Running in a container](DOCKER.md).
 - Reaching a local library from other devices. [The settings for it](LOCAL.md#reaching-it-from-other-devices) are covered by the tests, with a stand-in for the proxy, but no real proxy or home-server set-up is rehearsed here.
 - More than one family, or more than the two accounts, in one library.
 - Node.js versions other than 22.

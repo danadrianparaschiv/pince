@@ -109,7 +109,7 @@ With these two settings the library:
 - prints the set-up link with that address;
 - counts sign-in attempts by the address the proxy reports, not by the proxy's own.
 
-If the proxy runs on another computer, or the library runs in a container, the library also has to listen beyond its own computer: add `LIBRARY_HOST=0.0.0.0`. Do this only where the port can be reached by the proxy alone, or on a network you trust.
+If the proxy runs on another computer, the library also has to listen beyond its own computer: add `LIBRARY_HOST=0.0.0.0`. The [container image](DOCKER.md) sets this by itself, and comes with an example that runs the library behind such a proxy. Do this only where the port can be reached by the proxy alone, or on a network you trust.
 
 `npm run doctor` shows how the library will listen, and says so when other devices can reach it without HTTPS. Stopping the library, with Ctrl+C or a stop signal, lets requests in progress finish and closes the database first.
 

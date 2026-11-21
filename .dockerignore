@@ -1,0 +1,13 @@
+# Everything is left out of an image unless it is listed below. An image is as public as the
+# repository, and a folder that holds a library also holds its data (.library/), its keys (.env)
+# and the repository's history (.git). Listing what goes in, instead of what stays out, means a
+# new private file can never be picked up by accident.
+*
+
+!package.json
+!LICENSE
+!api/package.json
+!api/package-lock.json
+!api/src
+!web
+!scripts

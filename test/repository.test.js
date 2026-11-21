@@ -22,6 +22,7 @@ const pages = [
   'docs/CI-CD.md',
   'docs/SUPPORT.md',
   'docs/LOCAL.md',
+  'docs/DOCKER.md',
   'docs/REQUIREMENTS.md',
   'test/README.md',
 ];
@@ -50,7 +51,8 @@ test('no deployment address, key or home folder is written into the source or th
     new RegExp('gen-lang-' + 'client-\\d+'),
     new RegExp('the current ' + 'deployment uses', 'i'),
   ];
-  for (const file of [...(await sourceFiles()), ...pages, '.env.example', 'package.json']) {
+  const container = ['Dockerfile', '.dockerignore', 'docker/compose.yaml', 'docker/Caddyfile'];
+  for (const file of [...(await sourceFiles()), ...pages, ...container, '.env.example', 'package.json']) {
     const text = await read(file);
     for (const pattern of patterns) assert.doesNotMatch(text, pattern, file);
   }
@@ -167,6 +169,50 @@ test('workflows pin their actions, keep Azure away from pull requests, and start
   assert.match(deploy, /environment: azure/);
   // Only the deploy path may ask Azure for a token, and only the release job may write.
   assert.doesNotMatch(await read('.github/workflows/tests.yml'), /id-token|contents: write|secrets\./);
+});
+
+test('the container image has a pinned base, runs unprivileged and takes in only what is listed', async () => {
+  const dockerfile = await read('Dockerfile');
+  // The base is named by its exact contents, on the version of Node the project is tested on.
+  const bases = [...dockerfile.matchAll(/^FROM (\S+)/gm)].map(([, base]) => base);
+  const node = (await read('.nvmrc')).trim();
+  assert(bases.length > 0);
+  for (const base of bases)
+    assert.match(base, new RegExp('^node:' + node + '-bookworm-slim@sha256:[0-9a-f]{64}$'), base);
+  assert.equal(new Set(bases).size, 1, 'every stage starts from the same base');
+  assert.match(dockerfile, /^USER node$/m);
+  // Started directly, so that a stop signal reaches the library and not a wrapper.
+  assert.match(dockerfile, /^CMD \["node", "scripts\/dev\.js"\]$/m);
+  assert.match(dockerfile, /^HEALTHCHECK /m);
+  // No key or password is ever given to a build.
+  assert.doesNotMatch(dockerfile, /^(ARG|ENV)\b.*(KEY|PASSWORD|TOKEN|SECRET)/im);
+
+  // The build sees nothing but what this file lets in, so no data folder, settings file or
+  // history can reach an image, whatever else is in the folder.
+  const rules = (await read('.dockerignore'))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+  assert.equal(rules[0], '*');
+  assert.deepEqual(rules.slice(1).sort(), [
+    '!LICENSE',
+    '!api/package-lock.json',
+    '!api/package.json',
+    '!api/src',
+    '!package.json',
+    '!scripts',
+    '!web',
+  ]);
+  // Whatever the image copies from the folder is something that file lets in.
+  for (const [, sources] of dockerfile.matchAll(/^COPY (?!--from)(.+) \S+$/gm))
+    for (const source of sources.split(' '))
+      assert(rules.includes('!' + source), 'the image copies ' + source + ', which is left out of the build');
+
+  // In the Compose example only the proxy is reachable; the library publishes no port.
+  const compose = await read('docker/compose.yaml');
+  const library = compose.slice(compose.indexOf('\n  pince:'), compose.indexOf('\n  caddy:'));
+  assert(library.includes('PUBLIC_APP_ORIGIN: https://') && library.includes('LIBRARY_TRUSTED_PROXIES: "1"'));
+  assert.doesNotMatch(library, /^\s+ports:/m);
 });
 
 test('the only pictures in the repository are the two the app itself shows', async () => {

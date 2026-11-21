@@ -75,3 +75,30 @@ jobs:
           test -f "$RUNNER_TEMP/package/web/release.json"
           test -f "$RUNNER_TEMP/package/api/src/azure.js"
           test -d "$RUNNER_TEMP/package/api/node_modules/@img/sharp-linux-x64"
+
+  container:
+    name: Container image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - name: Build the image
+        run: docker build --tag pince:ci .
+      - name: Only the library's own files are in the image
+        run: |
+          test "$(docker run --rm pince:ci sh -c 'ls -A /app | sort | tr "\n" " "')" = "LICENSE api package.json scripts web "
+          test "$(docker run --rm pince:ci sh -c 'ls -A /app/api | sort | tr "\n" " "')" = "node_modules package.json src "
+          test -z "$(docker run --rm pince:ci find /app -path /app/api/node_modules -prune -o -name '.*' -print)"
+      - name: Start a container and use it
+        run: npm run smoke
+        env:
+          SMOKE_IMAGE: pince:ci
+      - name: The Compose example is valid
+        run: docker compose --file docker/compose.yaml config --quiet
+        env:
+          PINCE_HOST: books.example.org

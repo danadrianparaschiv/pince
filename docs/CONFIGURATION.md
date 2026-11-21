@@ -89,6 +89,16 @@ unset GOOGLE_KEY
 
 [DEPLOY.md](../DEPLOY.md#automatic-cover-suggestions) explains how to create each key, what each service costs, and the request limits the library keeps.
 
+## Trying a container image
+
+One setting belongs to the start-up check and not to the library. With `SMOKE_IMAGE` set to the name of a container image, `npm run smoke` runs its steps against a container of that image, with its data in a throwaway volume:
+
+```sh
+SMOKE_IMAGE=pince npm run smoke
+```
+
+[Running in a container](DOCKER.md) covers building and using the image.
+
 ## Checking before you commit
 
 ```sh
