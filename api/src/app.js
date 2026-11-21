@@ -28,12 +28,12 @@ const json = (value, status = 200, extra = {}) =>
   });
 // The server ends a session after a week. The browser keeps the cookie for 180 days, because an
 // expired one still tells sign-in that this browser has been here before; see knownDevice.
-const cookie = (val, local) =>
+const cookie = (val, plain) =>
   'library_session=' +
   val +
   '; Path=/api; HttpOnly; SameSite=Lax; Max-Age=' +
   (val ? 15552000 : 0) +
-  (local ? '' : '; Secure');
+  (plain ? '' : '; Secure');
 const maxBody = 9_000_000;
 async function parse(req, publicOrigin, limit = maxBody) {
   if (!req.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
@@ -80,6 +80,9 @@ export function makeApp({ store, env, local = false, model, reviewProvider, read
     if (!slot || slot.start + 60000 < time) readers.set(ip, { start: time, count: 1 });
     else if (++slot.count > 900) reject(429, 'throttle');
   }
+  // A library on your own computer is served over plain HTTP, which a `Secure` cookie would not
+  // survive. One that is opened at an HTTPS address, through a proxy, gets the flag like any other.
+  const plain = () => local && !String(env.PUBLIC_APP_ORIGIN || '').startsWith('https://');
   return async function handle(req, ip = 'local') {
     try {
       const url = new URL(req.url);
@@ -131,7 +134,7 @@ export function makeApp({ store, env, local = false, model, reviewProvider, read
       if (section === 'login' && method === 'POST' && path.length === 1) {
         body = await parse(req, env.PUBLIC_APP_ORIGIN, 4096);
         const result = await login(store, env, body, ip, req.headers.get('cookie') || '');
-        return json({ user: result.user }, 200, { 'Set-Cookie': cookie(result.token, local) });
+        return json({ user: result.user }, 200, { 'Set-Cookie': cookie(result.token, plain()) });
       }
       const actor = await identity(store, req, env);
       if (section === 'me' && method === 'GET' && path.length === 1)
@@ -149,7 +152,7 @@ export function makeApp({ store, env, local = false, model, reviewProvider, read
           ...u,
           sessions: u.sessions.filter((s) => s.digest !== digest),
         }));
-        return json({ ok: true }, 200, { 'Set-Cookie': cookie('', local) });
+        return json({ ok: true }, 200, { 'Set-Cookie': cookie('', plain()) });
       }
       if (section === 'me' && method === 'PATCH' && path.length === 1) {
         const language = checkLanguage(body.language);

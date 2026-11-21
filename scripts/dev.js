@@ -11,6 +11,7 @@ import { startLocalCovers } from './local-covers.js';
 import { dataFolder, loadLocalEnv } from './local-env.js';
 import { filled, loadSavedSettings, readSettings, services, writeSettings } from './local-settings.js';
 import { makeLocalSetup } from './local-setup.js';
+import { callerAddress, networkNotes, networkSettings, pageHeaders, shownAddress, stopOnSignal } from './local-network.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const web = resolve(root, 'web');
@@ -24,12 +25,16 @@ const env = { ...process.env };
 const outside = new Set(
   [...Object.values(services).flat(), 'PARENT_USERNAME', 'CHILD_USERNAME'].filter((name) => filled(env, name)),
 );
+let network;
 try {
   loadSavedSettings(env, data);
+  network = networkSettings(env);
 } catch (error) {
   console.error(error.message);
   process.exit(1);
 }
+// Browser writes are held to this address, exactly as written by the browser.
+if (network.origin) env.PUBLIC_APP_ORIGIN = network.origin;
 const credentials = resolve(data, 'local-access.json');
 let accounts;
 try {
@@ -58,10 +63,11 @@ for (const role of ['parent', 'child']) {
 const store = new LocalStore(data);
 if (env.LIBRARY_REASSIGN_ROLES === '1') await reassignConfiguredRoles(store, env);
 startLocalCovers(store, env);
-// Set-up waits until it is finished in the browser; `npm start -- --setup` opens it again.
+// Set-up waits until it is finished in the browser. `npm start -- --setup` opens it again, as
+// does LIBRARY_SETUP=1 where the command cannot be changed.
 const setup = makeLocalSetup({
   store, env, folder: data, outside,
-  open: readSettings(data)?.setup === 'pending' || process.argv.includes('--setup'),
+  open: readSettings(data)?.setup === 'pending' || process.argv.includes('--setup') || env.LIBRARY_SETUP === '1',
 });
 const app = makeApp({ store, local: true, env, setup });
 const mime = {
@@ -76,14 +82,16 @@ const mime = {
   '.jpg': 'image/jpeg',
   '.json': 'application/json',
 };
+const headers = pageHeaders();
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://' + req.headers.host);
     if (url.pathname.startsWith('/api/')) {
+      const sent = new Headers(req.headers);
       const response = await app({
-        url: url.href, method: req.method, headers: new Headers(req.headers),
+        url: url.href, method: req.method, headers: sent,
         body: req.iterator({ destroyOnReturn: false }),
-      }, req.socket.remoteAddress);
+      }, callerAddress(sent, req.socket.remoteAddress, network.proxies));
       if (!req.complete) res.setHeader('Connection', 'close');
       res.writeHead(response.status, Object.fromEntries(response.headers));
       if (response.body) Readable.fromWeb(response.body).pipe(res);
@@ -103,9 +111,9 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     res.writeHead(200, {
+      ...headers,
       'Content-Type': mime[extname(file)] || 'application/octet-stream',
       'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
     });
     res.end(req.method === 'HEAD' ? undefined : await readFile(file));
   } catch (error) {
@@ -114,12 +122,14 @@ const server = http.createServer(async (req, res) => {
   }
 });
 const port = Number(env.PORT || 46173);
-server.listen(port, '127.0.0.1', () => {
-  const address = 'http://127.0.0.1:' + server.address().port;
+server.listen(port, network.host, () => {
+  const address = shownAddress(network, server.address().port);
   console.log('Library: ' + address);
+  for (const note of networkNotes(network, server.address().port)) console.log(note);
   console.log('Local family sign-in details: ' + credentials);
   if (setup.token) {
     console.log('Set-up: choose your passwords and add service keys in the browser, with this one-time link:');
     console.log('  ' + address + '/setup#' + setup.token);
   }
 });
+stopOnSignal(server, () => store.db.close());

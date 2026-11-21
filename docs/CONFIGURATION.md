@@ -26,6 +26,10 @@ The settings of the four outside services (`AZURE_OPENAI_*`, `AZURE_VISION_*`, `
 | --- | --- | --- |
 | `PORT` | `46173` | Port of the local server |
 | `LIBRARY_LOCAL_DIR` | `.library` | Folder for the local catalogue, images and generated passwords |
+| `LIBRARY_HOST` | `127.0.0.1` | Address the local server listens on, as an IP address. `0.0.0.0` lets other devices connect; see [Reaching it from other devices](LOCAL.md#reaching-it-from-other-devices) |
+| `PUBLIC_APP_ORIGIN` | unset | The address browsers open the library at when a proxy stands in front, such as `https://books.example.org`. Changes are then accepted only from pages at that address, an `https` address keeps the session cookie to HTTPS, and the set-up link is printed with it |
+| `LIBRARY_TRUSTED_PROXIES` | `0` | How many proxies of your own stand in front, up to 5. The caller's address, used to limit sign-in attempts, is then read from what those proxies add to `X-Forwarded-For`. A proxy that adds nothing leaves all callers sharing one allowance |
+| `LIBRARY_SETUP` | unset | Set to `1` for one start to open the set-up screen again, where `npm start -- --setup` cannot be used |
 | `PARENT_USERNAME`, `CHILD_USERNAME` | `parinte`, `copil` | Account names: 1 to 48 ASCII letters, digits, dots, dashes or underscores |
 | `BOOTSTRAP_PARENT_PASSWORD`, `BOOTSTRAP_CHILD_PASSWORD` | generated | First passwords, 10 to 128 characters. If unset they are generated once and saved in `.library/local-access.json` |
 | `LIBRARY_REASSIGN_ROLES` | unset | Set to `1` for one start after swapping the two account names |

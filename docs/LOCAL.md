@@ -33,6 +33,8 @@ The link works once, while the library is running, and stops working when you fi
 npm start -- --setup
 ```
 
+Where the start command cannot be changed, as for a service or a container, set `LIBRARY_SETUP=1` for one start instead.
+
 If you skip the link altogether, open <http://127.0.0.1:46173> and sign in as **parinte** (parent) or **copil** (child) with the generated passwords in `.library/local-access.json`. The link is shown at every start until set-up is finished.
 
 If something does not work, ask the health check:
@@ -89,9 +91,31 @@ npm run setup
 
 Then start as usual. Your `.library/` folder is left alone. Back up first if the release notes mention a change to the data.
 
+## Reaching it from other devices
+
+Left alone, the library answers only on the computer it runs on. On a home server it can answer the family's phones and laptops too, through a proxy that adds HTTPS. The proxy is needed for two reasons: without HTTPS, passwords and service keys cross the network unprotected, and browsers switch off features that adding books relies on.
+
+1. Run a proxy, such as Caddy or nginx, that holds the certificate and passes requests on to the library's port. It has to add the caller's address to the `X-Forwarded-For` header.
+2. Tell the library the address people open, and that one proxy stands in front:
+
+```sh
+PUBLIC_APP_ORIGIN=https://books.example.org LIBRARY_TRUSTED_PROXIES=1 npm start
+```
+
+With these two settings the library:
+
+- accepts changes only from pages at that address;
+- keeps its session cookie to HTTPS;
+- prints the set-up link with that address;
+- counts sign-in attempts by the address the proxy reports, not by the proxy's own.
+
+If the proxy runs on another computer, or the library runs in a container, the library also has to listen beyond its own computer: add `LIBRARY_HOST=0.0.0.0`. Do this only where the port can be reached by the proxy alone, or on a network you trust.
+
+`npm run doctor` shows how the library will listen, and says so when other devices can reach it without HTTPS. Stopping the library, with Ctrl+C or a stop signal, lets requests in progress finish and closes the database first.
+
 ## Limits of a local library
 
-- **This computer only.** It listens on `127.0.0.1` over plain HTTP. Other devices cannot open it, and the public link of a book works only here.
+- **This computer only, unless you set it up otherwise.** It listens on `127.0.0.1` over plain HTTP, so other devices cannot open it and the public link of a book works only here. [Reaching it from other devices](#reaching-it-from-other-devices) has the settings for a home server.
 - **Only while it runs.** Cover lookups happen while `npm start` is running and continue the next time you start it.
 - **One program at a time.** Start one copy per data folder.
 
@@ -103,6 +127,7 @@ Then start as usual. Your `.library/` folder is left alone. Back up first if the
 | "Dependencies … Not installed" | Run `npm run setup` again; it installs the image library for this computer |
 | The port is in use | Another copy is running, or another program has the port. Start with `PORT=46200 npm start` |
 | Forgotten password | The parent can set a new password for the child in Family settings. To choose both again, start with `npm start -- --setup` and open the link it prints. Generated passwords that were never replaced are in `.library/local-access.json` |
+| Behind a proxy, signing in or saving is refused | `PUBLIC_APP_ORIGIN` must be exactly the address in the browser's address bar, without anything after the host |
 | The set-up link no longer works | It works once, while the library is running. Start again with `npm start -- --setup` for a new one |
 | "ExperimentalWarning: SQLite" at start | Harmless. Node 22 labels its built-in database that way |
 | Photo recognition cannot be switched on | Add its three settings under **Family settings → Services**. `npm run doctor` shows whether they are all present and the endpoint is valid |

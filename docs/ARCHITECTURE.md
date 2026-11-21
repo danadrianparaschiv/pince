@@ -108,7 +108,8 @@ Only fixed hosts are contacted. An address taken from a search result is never f
 - **Cross-site requests.** A request that changes anything must come from the library's own origin.
 - **Images.** Every uploaded image is decoded, resized and re-encoded on the server, which also drops embedded metadata such as location. Sizes are capped before decoding.
 - **Public pages** expose a book's title, author and chosen cover. Other covers, notes and shelf photos need a session.
-- **Browser policy.** `web/staticwebapp.config.json` sets a content security policy that allows only the site's own scripts and requests.
+- **Browser policy.** `web/staticwebapp.config.json` sets a content security policy that allows only the site's own scripts and requests. The local server sends the same headers, read from that file.
+- **A local library on a network.** `scripts/local-network.js` holds what lets other devices reach a library on your own computer: the address it listens on, the address people open, the proxies in front, and stopping cleanly.
 - **Logs** never include request bodies, credentials or photos.
 - **Setting up a local library.** The set-up routes accept only the random token of the link printed in the terminal. The token lives in memory, is compared in constant time, and is dropped when set-up is finished or the program stops. The browser takes it out of the address bar and keeps it for that tab only. Service keys are written once and never read back through the API, each is tried against its service before it is saved, and an Azure key is only ever sent to an HTTPS address on that service's own domain (`api/src/endpoints.js`).
 
