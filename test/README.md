@@ -28,6 +28,7 @@ The tests use Node's built-in runner and assertions. There is no test framework 
 | `shelf-scan.test.js`                            | Shelf photos: tiles, the model's rows, placing each title on its lettering                                                                |
 | `covers-scan.test.js`                           | Photos of several covers: finding each cover's edges, the scan mode                                                                       |
 | `catalog.test.js`                               | The bookshelf's search, sorting, filters, paging and labels                                                                               |
+| `duplicates.test.js`                            | Which books look like the same book: typos, volume numbers, authors, series names, and the bookshelf filter                               |
 | `family-features.test.js`                       | Shelf photos in backups, lending, the reading log, the wishlist and its public link                                                       |
 | `local.test.js`                                 | Running on a computer: the settings file, the health check, backup and restore from the command line                                      |
 | `setup.test.js`                                 | Setting up a local library in the browser: the one-time link, choosing the accounts, checking and saving service keys                     |

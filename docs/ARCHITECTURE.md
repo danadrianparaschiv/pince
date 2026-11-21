@@ -124,6 +124,7 @@ Only fixed hosts are contacted. An address taken from a search result is never f
 | `parent.js` | Family settings |
 | `setup.js`, `services.js` | The set-up screen of a local library, and the service-key forms it shares with Family settings |
 | `strings.js` | Labels in Romanian and English, and pure helpers (filtering, sorting, paging) that the tests exercise directly |
+| `duplicates.js` | Which books look like the same book: one rule for the add-book warning, the edit warning and the bookshelf filter |
 | `icons.js`, `*.css` | Icons and styles |
 
 State lives in memory and is redrawn from it. There is no client-side storage of catalogue data.

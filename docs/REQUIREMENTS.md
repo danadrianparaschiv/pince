@@ -43,7 +43,7 @@ Din „Adaugă o carte”, cititorul poate introduce datele manual, poate fotogr
 
 **FR03 Adaugă o carte** Singurul câmp obligatoriu este titlul, care trebuie să conțină cel puțin un caracter diferit de spațiu. Se pot adăuga unul sau mai mulți autori, un ISBN și o copertă. Se păstrează ortografia și diacriticele. La salvare, cartea primește un identificator permanent și data adăugării. Inițial este necitită, cu notița goală și opțiunea „Favorită” debifată.
 
-**FR04 Corectează datele** Copilul și părintele pot modifica datele cărții și pot înlocui sau elimina coperta. Dacă ISBN-ul coincide cu al unei cărți existente sau dacă titlul normalizat și autorul cunoscut coincid, aplicația semnalează un posibil duplicat. Cititorul poate deschide cartea existentă, poate sări peste înregistrare sau poate salva încă un exemplar.
+**FR04 Corectează datele** Copilul și părintele pot modifica datele cărții și pot înlocui sau elimina coperta. Dacă ISBN-ul coincide cu al unei cărți existente sau dacă titlul diferă cel mult printr-o greșeală de scriere, iar autorii cunoscuți nu se contrazic, aplicația semnalează un posibil duplicat. Majusculele, diacriticele și punctuația nu contează; un număr de volum diferit înseamnă altă carte. Cititorul poate deschide cartea existentă, poate sări peste înregistrare sau poate salva încă un exemplar.
 
 #### Fotografiile copertelor și ale rafturilor
 
@@ -71,7 +71,7 @@ Se păstrează o copie optimizată a copertei și o miniatură. Se elimină meta
 
 **FR12 Notița privată** Fiecare carte poate avea o notiță editabilă de cel mult 4.000 de caractere, în text simplu. Se pot introduce rânduri noi, modifica sau șterge textul. Aplicația arată dacă modificarea a fost salvată. Doar familia poate citi notița, inclusiv prin API.
 
-**FR13 Caută și filtrează** Căutarea găsește fragmente de titlu sau de nume de autor indiferent de majuscule sau diacritice. Se poate combina cu filtrul „Favorite” și cu oricare dintre cele două stări de lectură. Aplicația arată numărul rezultatelor și oferă „Șterge filtrele” când nu există rezultate.
+**FR13 Caută și filtrează** Căutarea găsește fragmente de titlu sau de nume de autor indiferent de majuscule sau diacritice. Se poate combina cu filtrul „Favorite” și cu oricare dintre cele două stări de lectură. Cât timp cel puțin două cărți par a fi aceeași carte, filtrul „Posibile duplicate” le arată una lângă alta; pe lângă greșelile de scriere, potrivește și un titlu cu sau fără numele colecției. Aplicația arată numărul rezultatelor și oferă „Șterge filtrele” când nu există rezultate.
 
 **FR14 Sortează rezultatele** Cărțile se pot sorta alfabetic după titlu sau autor în ambele sensuri ori după data adăugării, începând cu cele mai noi sau cele mai vechi. Ordinea implicită este după titlu, de la A la Z. Autorii necunoscuți apar ultimii. La egalitate se folosesc titlul, apoi identificatorul permanent. La revenirea dintr-o carte se păstrează căutarea, filtrele, ordinea și poziția în listă.
 
@@ -194,7 +194,7 @@ From Add a book, the reader can type the details, photograph one cover, or captu
 
 **FR03 Create a record** Require only a nonblank title. Accept one or more authors, an optional ISBN, and an optional cover. Display entered spelling and accents. Assign a permanent ID and date added on save. New books start as Not read, with Favorite off and an empty note.
 
-**FR04 Correct an entry** The child and parent can change book details and replace or remove a cover. If the ISBN matches an existing book, or its normalized title and known author match, show the possible duplicate. Offer to open the existing entry, skip, or save a separate copy.
+**FR04 Correct an entry** The child and parent can change book details and replace or remove a cover. If the ISBN matches an existing book, or the title differs by no more than a typo and the known authors do not contradict each other, show the possible duplicate. Case, accents and punctuation do not matter; a different volume number means a different book. Offer to open the existing entry, skip, or save a separate copy.
 
 #### Cover and shelf photos
 
@@ -222,7 +222,7 @@ Keep an optimized copy of the chosen book cover and a thumbnail. Strip location 
 
 **FR12 Private reading note** Keep one editable plain-text note per book, up to 4,000 characters. Allow line breaks, editing, and clearing. Show whether the change was saved. Only the family can read the note, including through the API.
 
-**FR13 Search and filter** Match partial titles and authors regardless of case or accents. Combine the search with Favorites and either reading state. Show the number of matches and a Clear filters action when the result is empty.
+**FR13 Search and filter** Match partial titles and authors regardless of case or accents. Combine the search with Favorites and either reading state. While at least two books look like the same one, offer a Possible duplicates filter that lists them side by side; besides typos, it also matches a title with and without its series name. Show the number of matches and a Clear filters action when the result is empty.
 
 **FR14 Sort results** Offer title and author in both alphabetical directions, plus newest or oldest date added. Default to title A–Z. Place missing authors last and break ties by title, then permanent ID. Returning from a book restores the search, filters, sort, and position.
 

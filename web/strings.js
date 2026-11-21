@@ -1,3 +1,5 @@
+import { duplicateGroups } from './duplicates.js';
+
 const labels = {
   brand: ['Pince', 'Pince'],
   skip: ['Sari la conținut', 'Skip to content'],
@@ -187,6 +189,7 @@ const labels = {
     'Ștergerea s-a oprit înainte de final. Cărțile rămase sunt încă în bibliotecă.',
     'Deleting stopped before it finished. The remaining books are still in the library.',
   ],
+  possibleDuplicates: ['Posibile duplicate', 'Possible duplicates'],
   lentOut: ['Împrumutate', 'Lent out'],
   lend: ['Împrumută cartea', 'Lend this book'],
   lentToField: ['Cui i-ai dat-o?', 'Who has it?'],
@@ -305,8 +308,11 @@ export function visibleBooks(books, filters, lang) {
       numeric: true,
     });
   const sort = filters.sort;
+  // Duplicates are looked for among all the books given, then narrowed like any other filter.
+  const twins = filters.dupes ? duplicateGroups(books) : null;
   const result = books.filter(
     (b) =>
+      (!twins || twins.has(b.id)) &&
       (!filters.fav || b.favorite) &&
       (!filters.read || b.read === (filters.read === 'read')) &&
       (!filters.cover || !!b.cover === (filters.cover === 'with')) &&
@@ -314,7 +320,7 @@ export function visibleBooks(books, filters, lang) {
       (!filters.shelf || (filters.shelf === 'none' ? !b.shelfPhoto : b.shelfPhoto?.id === filters.shelf)) &&
       (!term || fold(b.title).includes(term) || fold(b.authors).includes(term)),
   );
-  return result.sort((a, b) => {
+  result.sort((a, b) => {
     let order;
     if (sort[0] === 'a') {
       if (!a.authors !== !b.authors) return a.authors ? -1 : 1;
@@ -330,4 +336,13 @@ export function visibleBooks(books, filters, lang) {
     }
     return order || collator.compare(a.title, b.title) || String(a.id).localeCompare(String(b.id));
   });
+  if (!twins) return result;
+  // Books that look alike sit together, whatever a typo does to their place in the alphabet:
+  // each group stands where its first book would.
+  const place = new Map();
+  for (const b of result) if (!place.has(twins.get(b.id))) place.set(twins.get(b.id), place.size);
+  return result
+    .map((b, index) => ({ b, index }))
+    .sort((x, y) => place.get(twins.get(x.b.id)) - place.get(twins.get(y.b.id)) || x.index - y.index)
+    .map((entry) => entry.b);
 }
