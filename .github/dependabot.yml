@@ -1,6 +1,13 @@
-# Proposes a pull request when the container image's base has a newer build. That is how the
-# image gets security fixes for its operating system and for Node.js. A newer major version of
-# Node.js is not proposed: the project is built and tested on one version.
+# Proposes pull requests for what the project is built from, once a week:
+#
+# - the container image's base, which is how the image gets security fixes for its operating
+#   system and for Node.js. A newer major version of Node.js is not proposed: the project is
+#   built and tested on one version;
+# - the packages the library runs on (api/) and the formatter used for the tests (/);
+# - the actions the workflows use. Each is pinned to an exact commit, so it only moves when
+#   one of these pull requests is merged.
+#
+# Security fixes are proposed as soon as they are known, whatever the day.
 version: 2
 updates:
   - package-ecosystem: docker
@@ -10,3 +17,18 @@ updates:
     ignore:
       - dependency-name: node
         update-types: ['version-update:semver-major']
+  - package-ecosystem: npm
+    directories: ['/', '/api']
+    schedule:
+      interval: weekly
+    groups:
+      # One pull request for the small updates of a week; a new major version comes on its own.
+      packages:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

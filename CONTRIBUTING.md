@@ -83,6 +83,15 @@ The script reports, for each crop, correct titles, diacritic errors, missing or 
 
 ## Pull requests
 
+Every change reaches `main` through a pull request, the maintainer's own included:
+
+1. Start a branch from `main` for one change.
+2. Run `npm run check` before you push.
+3. Open a pull request. The **Tests** workflow has to pass before it can be merged.
+4. It is merged as one commit, named after the pull request, and its branch is deleted.
+
+A branch pushed to this repository is public from that moment, merged or not, and its commits stay reachable after the branch is deleted. Check what a branch holds before pushing it, not before merging it.
+
 - Keep each pull request to one change, with a description of what it does and why.
 - Run `npm test` and say what else you checked.
 - Update the documentation the change affects: the [user guide](docs/USER-GUIDE.md) for anything a reader sees, [configuration](docs/CONFIGURATION.md) for a new setting, [DEPLOY.md](DEPLOY.md) for anything that changes cost or deployment.
