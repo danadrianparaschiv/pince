@@ -9,6 +9,7 @@ Pince runs in three ways, and those three are the ones this project is tested on
 | Systems | macOS and Linux. Windows is tested in CI but not yet relied on | Linux containers on x86-64 and ARM64 | Deploying from macOS, Linux or WSL |
 | Who can use it | One person at that computer | One person at that computer, or the family on your network through a proxy with HTTPS | The family, from any phone or computer; friends through public book links |
 | Checked by | Tests, and a start-up check on every change | The same tests, and the same start-up check against a container on both kinds of computer, on every change and before an image is published | The same tests, plus a build of the templates and the package on every change, and the script's own checks after each deployment |
+| Setting it up | The set-up link printed on the first start | The same set-up link, read from the container's log | `./scripts/deploy.sh setup`, which asks each question in the terminal |
 | Health check | `npm run doctor` | `docker ps`, and `node scripts/doctor.mjs` inside the container | `./scripts/deploy.sh doctor` and `./scripts/deploy.sh status` |
 | Backup | `npm run backup`, or **Family settings** in the app | **Family settings** in the app, or the backup command inside the container | **Family settings** in the app |
 | Removing it | Delete the folder | Remove the container and its volume | `./scripts/deploy.sh destroy` |
@@ -16,6 +17,8 @@ Pince runs in three ways, and those three are the ones this project is tested on
 All three run the same code and keep the same data. The container is the local library in a package; only Azure has different storage behind it. A backup made in one restores into any other.
 
 The Azure path is rehearsed from a clean copy of the repository: `doctor`, `init`, `status`, `publish` and `destroy`, in a resource group of its own. It was last rehearsed on 20 November 2026 on macOS, without photo recognition and with `--with-vision`, in a second subscription. The run with photo recognition started from the zip that GitHub serves for the repository. A real photo of several front covers was read and its covers cut out, both before and after a `publish` that carried a change. That `publish` left every setting as it was, including the service keys on the cover worker, and a book added afterwards got its cover from the worker. The library was then removed and nothing was left behind.
+
+The guided `setup` and `keys` commands were added after these rehearsals. Their questions, and what they hand to Azure, are covered by tests against a stand-in for the Azure CLI; they have not yet been rehearsed against Azure itself. `setup` ends in the same steps as `init`.
 
 The same day it was rehearsed on Linux: Ubuntu 24.04 on x86-64, in a container that started with only Node.js, the Azure CLI and `zip`. There `doctor` named what was missing, `init --with-vision` created the library, a photo was read, a book got its cover, and `destroy` removed everything.
 

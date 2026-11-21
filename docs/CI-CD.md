@@ -76,7 +76,7 @@ A published image is never rebuilt. When the image's base has a newer build, Dep
 
 The workflow runs `./scripts/deploy.sh publish`, the same command you would run by hand. It updates the site, the API and the cover worker, keeps the stored service keys, and ends with the script's own checks against the published site.
 
-It does **not** create a library. Run `./scripts/deploy.sh init` once from your computer first, because it asks for the two account passwords; see [DEPLOY.md](../DEPLOY.md). Service keys are also stored from your computer, as described in [Configuration](CONFIGURATION.md#storing-a-service-key).
+It does **not** create a library. Run `./scripts/deploy.sh setup` once from your computer first, because it asks for the two account passwords; see [DEPLOY.md](../DEPLOY.md). Service keys are also stored from your computer, as described in [Configuration](CONFIGURATION.md#storing-a-service-key).
 
 ### One-time setup in Azure
 
