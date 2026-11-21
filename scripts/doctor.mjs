@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { validModelEndpoint, validTextEndpoint } from '../api/src/endpoints.js';
 import { dataFolder, loadLocalEnv, nodeProblem, root } from './local-env.js';
 import { filled, loadSavedSettings } from './local-settings.js';
+import { networkSettings, reachable } from './local-network.js';
 
 const item = (state, name, detail = '') => ({ state, name, detail });
 
@@ -60,6 +61,24 @@ export async function report(env = process.env, { added = [] } = {}) {
         ? item('note', 'Port ' + port + ' is in use', 'The library may already be running. Otherwise set PORT to another number.')
         : item('note', 'Port ' + port, 'Could not be checked.'),
   );
+  try {
+    const network = networkSettings(env);
+    const parts = [
+      reachable(network) ? 'Other devices can reach it (listens on ' + network.host + ')' : 'This computer only',
+      network.origin && 'opened at ' + network.origin,
+      network.proxies && 'behind ' + network.proxies + (network.proxies === 1 ? ' proxy' : ' proxies'),
+    ].filter(Boolean);
+    const unprotected = reachable(network) && !network.origin?.startsWith('https:');
+    checks.push(
+      item(
+        reachable(network) ? 'note' : 'ok',
+        'Network',
+        parts.join(', ') + '.' + (unprotected ? ' Without HTTPS in front, passwords and keys cross the network unprotected.' : ''),
+      ),
+    );
+  } catch (error) {
+    checks.push(item('problem', 'Network', error.message));
+  }
   const data = dataFolder(env);
   checks.push(
     existsSync(resolve(data, 'local-access.json'))

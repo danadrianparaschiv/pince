@@ -25,7 +25,7 @@ The deploy script has not yet been rehearsed on WSL, nor in a subscription that 
 
 ## How the two differ
 
-- **Reach.** A local library listens on that computer only, over plain HTTP. Phones on the home network cannot open it, and public book links work only on that computer. For a library the family uses from several devices, deploy to Azure.
+- **Reach.** A local library listens on that computer only, over plain HTTP, unless you put a proxy with HTTPS in front and tell the library so. Otherwise phones on the home network cannot open it, and public book links work only on that computer. For a library the family uses from several devices without running a server at home, deploy to Azure.
 - **Cover lookups.** Locally they run inside the same program while it is open. On Azure a small separate worker runs them, including after the browser is closed.
 - **Shelf photos** are kept beside the catalogue in both, and are part of a backup in both.
 - **Costs.** Local running costs nothing by itself. Photo recognition and cover searches use your own keys in both places, with the same spending limits.
@@ -33,7 +33,7 @@ The deploy script has not yet been rehearsed on WSL, nor in a subscription that 
 ## What is not supported
 
 - Other clouds or hosting services, and Docker images.
-- Reaching a local library from other devices. It can be made to work with your own HTTPS set-up, but it is not tested here.
+- Reaching a local library from other devices. [The settings for it](LOCAL.md#reaching-it-from-other-devices) are covered by the tests, with a stand-in for the proxy, but no real proxy or home-server set-up is rehearsed here.
 - More than one family, or more than the two accounts, in one library.
 - Node.js versions other than 22.
 

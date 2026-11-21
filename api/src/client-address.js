@@ -4,11 +4,15 @@
 // entries, each with a port: the caller as Azure's edge saw it, then the edge. Anything further
 // left is whatever the caller sent, and so is every other address header, x-azure-clientip
 // included. Measured against a deployed library on 20 November 2026.
+//
+// A library on your own computer behind proxies of your own works the same way: each proxy
+// appends the address it was called from, so with `entries` proxies the caller is that many
+// entries from the right.
 const platformEntries = 2;
-export function clientAddress(headers) {
+export function clientAddress(headers, entries = platformEntries) {
   const list = (headers.get('x-forwarded-for') || '').split(',').map((entry) => entry.trim());
-  if (list.length < platformEntries) return 'shared';
-  const entry = list.at(-platformEntries);
+  if (list.length < entries) return 'shared';
+  const entry = list.at(-entries);
   const v4 = /^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/.exec(entry);
   if (v4) return v4[1];
   // An IPv6 caller is counted by its network, the first four groups: one home has many addresses.

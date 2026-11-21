@@ -14,7 +14,7 @@ Three GitHub Actions workflows check every change, publish releases, and deploy 
 
 1. installs with `npm run setup` and runs the health check (`npm run doctor`);
 2. runs the tests with the coverage limits (`npm run coverage`);
-3. starts the library the way `npm start` does and uses it: opens the page, signs in, saves a book and reads its public address (`npm run smoke`).
+3. starts the library the way `npm start` does and uses it: opens the page, signs in, saves a book, reads its public address and sets it up with the one-time link; then starts it again as it runs behind an HTTPS proxy, and checks that it stops cleanly (`npm run smoke`).
 
 Windows runs every time but does not block a merge yet. Once it has passed for a while, remove `continue-on-error` from the workflow to make it count.
 

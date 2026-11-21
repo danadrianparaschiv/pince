@@ -17,22 +17,23 @@ The tests use Node's built-in runner and assertions. There is no test framework 
 
 ## What is tested where
 
-| File                                            | Covers                                                                                                                |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `library.test.js`                               | The API end to end: accounts and sessions, books, public pages, images, bulk delete, shelf photos, spending limits    |
-| `security.test.js`                              | Account hand-over and back-off, the current-password rule, request size limits, and what the cover worker may do      |
-| `store.test.js`                                 | The storage contract, run against both SQLite and the Azure adapter                                                   |
-| `covers.test.js`                                | Cover lookups as a job: queueing, late results, Open Library, backups                                                 |
-| `google-covers.test.js`, `brave-covers.test.js` | The other two cover sources, their matching rules and request limits                                                  |
-| `book-review.test.js`                           | Checking titles read from a photo against the catalogues, and the proof required to save them                         |
-| `shelf-scan.test.js`                            | Shelf photos: tiles, the model's rows, placing each title on its lettering                                            |
-| `covers-scan.test.js`                           | Photos of several covers: finding each cover's edges, the scan mode                                                   |
-| `catalog.test.js`                               | The bookshelf's search, sorting, filters, paging and labels                                                           |
-| `family-features.test.js`                       | Shelf photos in backups, lending, the reading log, the wishlist and its public link                                   |
-| `local.test.js`                                 | Running on a computer: the settings file, the health check, backup and restore from the command line                  |
-| `setup.test.js`                                 | Setting up a local library in the browser: the one-time link, choosing the accounts, checking and saving service keys |
-| `deploy-script.test.js`                         | The deployment script's `doctor`, `status` and `destroy`, against a stand-in for the Azure CLI                        |
-| `repository.test.js`                            | The repository itself: nothing private in it, documentation that matches the code                                     |
+| File                                            | Covers                                                                                                                                    |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `library.test.js`                               | The API end to end: accounts and sessions, books, public pages, images, bulk delete, shelf photos, spending limits                        |
+| `security.test.js`                              | Account hand-over and back-off, the current-password rule, request size limits, and what the cover worker may do                          |
+| `store.test.js`                                 | The storage contract, run against both SQLite and the Azure adapter                                                                       |
+| `covers.test.js`                                | Cover lookups as a job: queueing, late results, Open Library, backups                                                                     |
+| `google-covers.test.js`, `brave-covers.test.js` | The other two cover sources, their matching rules and request limits                                                                      |
+| `book-review.test.js`                           | Checking titles read from a photo against the catalogues, and the proof required to save them                                             |
+| `shelf-scan.test.js`                            | Shelf photos: tiles, the model's rows, placing each title on its lettering                                                                |
+| `covers-scan.test.js`                           | Photos of several covers: finding each cover's edges, the scan mode                                                                       |
+| `catalog.test.js`                               | The bookshelf's search, sorting, filters, paging and labels                                                                               |
+| `family-features.test.js`                       | Shelf photos in backups, lending, the reading log, the wishlist and its public link                                                       |
+| `local.test.js`                                 | Running on a computer: the settings file, the health check, backup and restore from the command line                                      |
+| `setup.test.js`                                 | Setting up a local library in the browser: the one-time link, choosing the accounts, checking and saving service keys                     |
+| `network.test.js`                               | A local library that other devices reach: where it listens, the address people open, proxies, the pages' browser policy, stopping cleanly |
+| `deploy-script.test.js`                         | The deployment script's `doctor`, `status` and `destroy`, against a stand-in for the Azure CLI                                            |
+| `repository.test.js`                            | The repository itself: nothing private in it, documentation that matches the code                                                         |
 
 `helpers.js` holds what the files share: a temporary store, a running copy of the API, and test pictures. Real photos are not part of the repository: keep your own in `sample-photos/` or `sample-images/`, which git ignores, for trying the photo methods by hand. `fixtures/` holds recorded data: hand-read labels for three shelf photos and a text detector's answer for one of them.
 
