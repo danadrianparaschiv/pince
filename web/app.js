@@ -1,5 +1,6 @@
 import { icon } from './icons.js';
-import { tr, hasMessage, localeChoice, fold, countBooks, visibleBooks, shelfChoices, shelfLabel, pageOf, pageLabel, rangeLabel, selectedCount,
+import { duplicateGroups, sameBook } from './duplicates.js';
+import { tr, hasMessage, localeChoice, countBooks, visibleBooks, shelfChoices, shelfLabel, pageOf, pageLabel, rangeLabel, selectedCount,
   deleteCount, deletingProgress, deletedMany, keptChanged, andMore, lentLabel, ratingLabel, finishedIn, finishedLabel, localDay } from './strings.js';
 
 const main = document.querySelector('#main');
@@ -13,7 +14,7 @@ const esc = (value) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
 const attr = esc;
-const defaults = () => ({ search: '', read: '', fav: false, cover: '', shelf: '', lent: false, sort: 'tAsc' });
+const defaults = () => ({ search: '', read: '', fav: false, cover: '', shelf: '', lent: false, dupes: false, sort: 'tAsc' });
 // The shelf and the wishlist are the same list page over two halves of the library.
 const listPage = () => state.page === 'catalog' || state.page === 'wishlist';
 const wishing = () => state.page === 'wishlist';
@@ -526,8 +527,11 @@ function updateResults() {
   if (f.shelf && !(f.shelf === 'none' ? shelves.length : shelves.some((s) => s.id === f.shelf))) f.shelf = '';
   // The last lent book may have come home.
   if (f.lent && !anyLent) f.lent = false;
+  // The last pair of look-alikes may have been corrected or deleted.
+  const anyTwins = !wish && duplicateGroups(pool).size > 0;
+  if (f.dupes && !anyTwins) f.dupes = false;
   const books = visibleBooks(pool, listFilters(), state.lang),
-    filtered = !!(wish ? f.search : f.fav || f.read || f.cover || f.shelf || f.lent || f.search);
+    filtered = !!(wish ? f.search : f.fav || f.read || f.cover || f.shelf || f.lent || f.dupes || f.search);
   const option = (value, label) =>
     '<option value="' + attr(value) + '"' + (value === f.shelf ? ' selected' : '') + '>' + esc(label) + '</option>';
   const chip = (key, on, label, image = '') =>
@@ -541,7 +545,7 @@ function updateResults() {
     '</button>';
   // A wished-for book is neither read, lent nor on a shelf yet, so its list only searches and sorts.
   main.querySelector('#filters').innerHTML = wish ? '' :
-    chip('all', !f.fav && !f.read && !f.cover && !f.shelf && !f.lent, 'all') +
+    chip('all', !f.fav && !f.read && !f.cover && !f.shelf && !f.lent && !f.dupes, 'all') +
     chip('fav', f.fav, 'favorites', 'heart') +
     '<span class="chip-sep"></span>' +
     chip('read', f.read === 'read', 'read') +
@@ -551,6 +555,8 @@ function updateResults() {
     chip('without', f.cover === 'without', 'withoutCover') +
     // Shown while at least one book is away from home.
     (anyLent ? '<span class="chip-sep"></span>' + chip('lent', f.lent, 'lentOut') : '') +
+    // Shown while at least two books look like the same one.
+    (anyTwins ? '<span class="chip-sep"></span>' + chip('dupes', f.dupes, 'possibleDuplicates') : '') +
     // Shown once at least one book was saved from a shelf photo.
     (shelves.length
       ? '<span class="chip-sep"></span><select id="shelf-filter" class="sortselect shelfselect' +
@@ -592,7 +598,8 @@ function updateResults() {
       ? '<div class="selectbar" role="group" aria-label="' +
         attr(t('selection')) +
         '"><strong id="picked-count" role="status"></strong>' +
-        (books.length
+        // Among look-alikes "all" would mean every copy of each book, so the copies are ticked by hand.
+        (books.length && !f.dupes
           ? '<button type="button" class="ui-btn" data-action="select-all">' +
             esc(t('selectAll')) +
             ' (' +
@@ -1424,15 +1431,8 @@ async function submitEdit() {
     hideModal();
     return;
   }
-  const isbn = fold(draft.isbn).replace(/[-\s]/g, '');
-  const possible = state.books.find(
-    (item) =>
-      item.id !== b.id &&
-      ((isbn && fold(item.isbn).replace(/[-\s]/g, '') === isbn) ||
-        (fold(item.title) === fold(draft.title) &&
-          fold(draft.authors) &&
-          fold(item.authors) === fold(draft.authors))),
-  );
+  // The same rule as the add-book screen: the same ISBN, or a title no more than a typo away.
+  const possible = state.books.find((item) => item.id !== b.id && sameBook(draft, item));
   if (possible && !m.duplicate && (changes.title || changes.isbn || changes.authors)) {
     m.duplicate = possible;
     renderModal();
@@ -1624,7 +1624,7 @@ async function perform(action, el) {
     case 'select-mode':
       state.picked = new Set();
       updateResults();
-      main.querySelector('[data-action="select-all"]')?.focus();
+      main.querySelector('[data-action="select-all"],[data-action="select-none"]')?.focus();
       break;
     case 'select-done':
       state.picked = null;
@@ -1635,7 +1635,7 @@ async function perform(action, el) {
     case 'select-none':
       // "All" means every book that matches the current search and filters, on every page.
       if (action === 'select-none') state.picked.clear();
-      else for (const b of visibleBooks(listed(), listFilters(), state.lang)) state.picked.add(b.id);
+      else if (!listFilters().dupes) for (const b of visibleBooks(listed(), listFilters(), state.lang)) state.picked.add(b.id);
       updateResults();
       main.querySelector('[data-action="' + (action === 'select-all' ? 'delete-selected' : 'select-all') + '"]')?.focus();
       break;
@@ -1796,10 +1796,13 @@ document.addEventListener('click', async (e) => {
         f.cover = '';
         f.shelf = '';
         f.lent = false;
+        f.dupes = false;
       } else if (key === 'fav') {
         f.fav = !f.fav;
       } else if (key === 'lent') {
         f.lent = !f.lent;
+      } else if (key === 'dupes') {
+        f.dupes = !f.dupes;
       } else if (key === 'with' || key === 'without') {
         f.cover = f.cover === key ? '' : key;
       } else {

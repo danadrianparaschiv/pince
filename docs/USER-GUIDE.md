@@ -26,7 +26,7 @@ Text read from a photo is never saved as it is. For each row the app looks the t
 - choose a suggested entry, which fills in the title, author, publisher and date; or
 - confirm the details as you typed or corrected them.
 
-A date can be a year (2019), a month (2019-05) or a full date (2019-05-20). Rows the app is unsure about are marked, and a book that is already in the library is flagged so you can skip it. When every selected row is confirmed, save.
+A date can be a year (2019), a month (2019-05) or a full date (2019-05-20). Rows the app is unsure about are marked, and a book that is already in the library is flagged so you can skip it, even when its title is a typo away. When every selected row is confirmed, save.
 
 ### Photographing a shelf
 
@@ -54,8 +54,9 @@ A date can be a year (2019), a month (2019-05) or a full date (2019-05-20). Rows
 
 - **Search** by title or author, and **sort** by title, author, date added or latest finished.
 - **Filter** with the chips: favourites, read or not read, with or without a cover. **Lent out / Împrumutate** appears while at least one book is away. The shelf list appears once a book has been saved from a shelf photo, and shows each shelf by number, date and number of books.
+- **Possible duplicates / Posibile duplicate** appears while at least two books look like the same one: the same ISBN, titles a typo apart, or a title with and without its series name. The look-alikes are listed side by side. Some may be different books, such as two volumes of a series; correct a title or delete the extra copy and the pair leaves the list.
 - The bookshelf shows 24 books a page, and counts the books finished this year.
-- The parent can choose **Select books / Selectează cărți**, tick books on any page or use **Select all** for every book matching the current search and filters, then delete them. Deleting is permanent, so download a backup first if you may want the books back.
+- The parent can choose **Select books / Selectează cărți**, tick books on any page or use **Select all** for every book matching the current search and filters, then delete them. Among possible duplicates there is no Select all, so that the copy to keep is never ticked by accident. Deleting is permanent, so download a backup first if you may want the books back.
 
 ## A book's page
 

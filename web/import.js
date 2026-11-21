@@ -1,3 +1,5 @@
+import { sameBook } from './duplicates.js';
+
 export const TEXT = {
   ro: {
     heading: 'Adaugă o carte',
@@ -526,32 +528,6 @@ function normalized(value) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ');
-}
-
-const plain = (value) => normalized(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-const surnames = (value) =>
-  String(value || '')
-    .split(/,|&|•|;| și | and /)
-    .map((name) => plain(name).split(' ').pop())
-    .filter(Boolean);
-
-function sameBook(a, b) {
-  const isbn = String(a.isbn || '')
-    .replace(/[\s-]/g, '')
-    .toUpperCase();
-  if (
-    isbn &&
-    isbn ===
-      String(b.isbn || '')
-        .replace(/[\s-]/g, '')
-        .toUpperCase()
-  )
-    return true;
-  // Spines often show no author, so a matching title is enough unless both sides name different people.
-  const title = plain(a.title);
-  if (!title || title !== plain(b.title)) return false;
-  const mine = surnames(a.authors), theirs = surnames(b.authors);
-  return !mine.length || !theirs.length || mine.some((name) => theirs.includes(name));
 }
 
 function mountCrop(photo, preview, t, commit, render) {
