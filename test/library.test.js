@@ -75,6 +75,8 @@ test('public projection, real image validation, optimistic merging, idempotent i
   assert.equal(b.status, 201);
   const start = a.data.books[0];
   assert.equal(b.data.books[0].cover, start.cover);
+  // Saved with its own picture, the book is not searched for other covers until someone asks.
+  assert.equal(start.coverLookup, null);
   assert.equal((await call('books', 'GET', undefined, c)).data.books.length, 1);
   assert.equal((await call('books', 'POST', { books: [{ id: randomUUID(), title: '  ' }] }, c)).status, 400);
   assert.equal(

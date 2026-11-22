@@ -6,8 +6,17 @@ import { coverFingerprint } from './cover-source.js';
 import { braveRequestBudget, findCovers, googleRequestBudget } from './cover-providers.js';
 
 const active = s => ['queued', 'searching'].includes(s);
-export async function requestCovers(store, id, { retry = false } = {}) {
+// The reader's own picture is the chosen cover: a photo taken while adding the book, or one uploaded later.
+const ownCover = book => Boolean(book.image) && coverOptions(book).find(c => c.key === book.image)?.source === 'upload';
+/**
+ * Queues a search for covers. `retry` is the reader asking again; `auto` is a search nobody asked
+ * for, started because a book was saved, and it is left out when the book already shows the
+ * reader's own picture: the search would only add pictures beside it, at the cost of requests
+ * to the outside services. Such a book is searched when the reader asks.
+ */
+export async function requestCovers(store, id, { retry = false, auto = false } = {}) {
   const before = await getBook(store, id), fingerprint = coverFingerprint(before), prior = before.coverLookup;
+  if (auto && ownCover(before)) return view(before);
   const age = Date.now() - Date.parse(prior?.updatedAt || 0);
   if (prior?.fingerprint === fingerprint) {
     if (active(prior.status) && age < 10 * 60_000) return view(before);
@@ -34,7 +43,7 @@ export async function requestCovers(store, id, { retry = false } = {}) {
 export async function scheduleSaved(store, result) {
   if (!store.enqueueCover) return result;
   for (let i = 0; i < result.books.length; i++) {
-    try { result.books[i] = await requestCovers(store, result.books[i].id); } catch { /* Retry from edit. */ }
+    try { result.books[i] = await requestCovers(store, result.books[i].id, { auto: true }); } catch { /* Retry from edit. */ }
   }
   return result;
 }

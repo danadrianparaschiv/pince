@@ -25,7 +25,18 @@ export const TEXT = {
     useCover: 'Folosește drept copertă',
     coversOwnStep: '3. Salvează cu copertele din fotografie',
     reviewHelpCovers: 'Căutăm datele în cataloage de cărți. Alege datele potrivite pentru fiecare carte și verifică decuparea copertelor.',
+    reviewHelpCover: 'Căutăm datele în cataloage de cărți. Alege datele potrivite. Fotografia rămâne coperta cărții.',
     savedWithCovers: 'Datele confirmate au fost salvate, cu copertele din fotografie.',
+    savedWithCover: 'Datele confirmate au fost salvate, cu coperta din fotografie.',
+    coverOwnStep: '3. Salvează cu coperta din fotografie',
+    coversOnRequest:
+      'Nu căutăm alte coperte pe web când o carte are deja coperta din fotografie. Poți cere asta acum sau mai târziu, din „Modifică datele cărții”.',
+    findCovers: 'Caută coperte pe web',
+    findingCovers: 'Pornim căutarea…',
+    coversRequestedOne: 'Căutăm până la două coperte. Le găsești în „Modifică datele cărții”.',
+    coversRequestedMany: 'Căutăm până la două coperte pentru fiecare carte. Le găsești în „Modifică datele cărții”.',
+    coversRequestedSome: 'Căutarea a pornit pentru {n} din {total} cărți. Apasă din nou peste un minut pentru celelalte.',
+    coversRequestFailed: 'Căutarea nu a putut porni. Poți încerca din nou.',
     methods: 'Cum adaugi cărțile?',
     details: 'Datele cărții',
     book: 'Carte',
@@ -162,7 +173,18 @@ export const TEXT = {
     useCover: 'Use as cover',
     coversOwnStep: '3. Save with the covers from the photo',
     reviewHelpCovers: 'We check book catalogs for the details. Choose the right details for each book and check each cover cut-out.',
+    reviewHelpCover: 'We check book catalogs for the details. Choose the right details. The photo stays as the cover of the book.',
     savedWithCovers: 'Your confirmed details are saved, with the covers from the photo.',
+    savedWithCover: 'Your confirmed details are saved, with the cover from the photo.',
+    coverOwnStep: '3. Save with the cover from the photo',
+    coversOnRequest:
+      'Other covers are not looked for online when a book already has its cover from the photo. You can ask for that now, or later from Edit book details.',
+    findCovers: 'Find covers online',
+    findingCovers: 'Starting the search…',
+    coversRequestedOne: 'Looking for up to two covers. You will find them under Edit book details.',
+    coversRequestedMany: 'Looking for up to two covers for each book. You will find them under Edit book details.',
+    coversRequestedSome: 'The search has started for {n} of {total} books. Press again in a minute for the rest.',
+    coversRequestFailed: 'The search could not start. You can try again.',
     methods: 'How would you like to add books?',
     details: 'Book details',
     book: 'Book',
@@ -639,9 +661,16 @@ export function mountImport(root, context) {
   let message = null;
   let refreshRows = () => {};
   const saved = new Map();
+  // Books saved with their own picture are not searched for other covers until the reader asks.
+  const ownCover = new Set(),
+    coversAsked = new Set();
+  let asking = false,
+    askNote = null;
   const known = [...context.books];
   const unit = () => (mode === 'shelf' ? shelf : mode === 'covers' ? covers : single);
   const many = () => mode === 'shelf' || mode === 'covers';
+  // One cover was photographed: the photo is the book's cover, so no others are looked for unless asked.
+  const ownPhoto = () => mode === 'cover' && Boolean(unit().photo.canvas);
   const words = () => TEXT[lang];
   const busy = () => saving || scanning || reviewing || unit().photo.busy;
   const locked = (row) => row.pending || row.saved;
@@ -1288,6 +1317,7 @@ export function mountImport(root, context) {
           row.pending = false;
           row.submitted = null;
           saved.set(book.id, book);
+          if (book.cover && !book.coverLookup) ownCover.add(book.id);
           known.push(book);
         }
         if (chunk.some((r) => !r.saved)) throw new Error('Incomplete save');
@@ -1299,6 +1329,29 @@ export function mountImport(root, context) {
       saving = false;
       if (alive) render();
     }
+  }
+
+  async function findCovers() {
+    if (asking) return;
+    asking = true;
+    askNote = null;
+    render();
+    let stopped = null;
+    for (const id of ownCover) {
+      if (coversAsked.has(id)) continue;
+      try {
+        const { book } = await context.api('/books/' + encodeURIComponent(id) + '/cover-lookup', 'POST', {});
+        coversAsked.add(id);
+        saved.set(id, book);
+      } catch (err) {
+        stopped = err;
+        break;
+      }
+    }
+    asking = false;
+    // The library takes a limited number of these requests a minute; the rest can be asked for again.
+    askNote = !stopped ? null : stopped.status === 429 && coversAsked.size ? 'coversRequestedSome' : 'coversRequestFailed';
+    if (alive) render();
   }
 
   function changeMode(next) {
@@ -1330,10 +1383,23 @@ export function mountImport(root, context) {
     if (finished) {
       const summary = node('section', 'imp-card imp-complete');
       summary.append(node('p', 'imp-count', t.savedCount + ' · ' + saved.size));
-      summary.append(node('p','imp-hint',mode === 'covers' ? t.savedWithCovers : t.coversAfterSave));
+      summary.append(node('p', 'imp-hint',
+        ownCover.size < saved.size ? t.coversAfterSave : saved.size === 1 ? t.savedWithCover : t.savedWithCovers));
       const list = node('ul', 'imp-result-list');
       for (const item of saved.values()) list.append(node('li', '', item.title));
-      summary.append(list, btn(t.back, done, 'imp-solid'));
+      summary.append(list);
+      if (ownCover.size) {
+        const note = node('p', 'imp-hint',
+          askNote ? t[askNote].replace('{n}', coversAsked.size).replace('{total}', ownCover.size)
+            : !coversAsked.size ? t.coversOnRequest
+            : coversAsked.size === 1 ? t.coversRequestedOne : t.coversRequestedMany);
+        note.setAttribute('role', 'status');
+        summary.append(note);
+      }
+      const actions = node('div', 'imp-inline');
+      if (ownCover.size > coversAsked.size) actions.append(btn(asking ? t.findingCovers : t.findCovers, findCovers, '', asking));
+      actions.append(btn(t.back, done, 'imp-solid', asking));
+      summary.append(actions);
       page.append(summary);
       root.replaceChildren(page);
       return;
@@ -1355,7 +1421,8 @@ export function mountImport(root, context) {
     const photoFlow = mode !== 'manual' || batch.rows.some(r => r.requiresReview);
     if (photoFlow) {
       const steps = node('ol','imp-steps');
-      for (const text of [t.photoStep,t.validateStep,mode === 'covers' ? t.coversOwnStep : t.coversStep]) steps.append(node('li','',text));
+      const last = mode === 'covers' ? t.coversOwnStep : ownPhoto() ? t.coverOwnStep : t.coversStep;
+      for (const text of [t.photoStep, t.validateStep, last]) steps.append(node('li', '', text));
       page.append(steps);
     }
     const form = node('form', 'imp-form');
@@ -1368,7 +1435,8 @@ export function mountImport(root, context) {
     if (mode !== 'manual') layout.append(photoPanel());
     const details = node('section', 'imp-card imp-details');
     details.append(node('h2', 'imp-h2', photoFlow ? t.reviewStep : multi ? t.review : t.details));
-    if (photoFlow) details.append(node('p','imp-hint',mode === 'covers' ? t.reviewHelpCovers : t.reviewHelp));
+    if (photoFlow)
+      details.append(node('p', 'imp-hint', mode === 'covers' ? t.reviewHelpCovers : ownPhoto() ? t.reviewHelpCover : t.reviewHelp));
     for (const [key, n] of batch.photo.notes) details.append(node('p', 'imp-scan-note', t[key].replace('{n}', n)));
     const update = [];
     batch.rows.forEach((r, i) => details.append(rowEditor(r, i, update)));
@@ -1419,7 +1487,8 @@ export function mountImport(root, context) {
       const unchecked = selected.some(r => needsReview(r) && !r.review);
       const unconfirmed = selected.some(r => !reviewed(r));
       const label = saving ? t.saving : reviewing ? t.reviewChecking : pending ? t.retry :
-        photoFlow ? unchecked ? t.reviewNext : mode === 'covers' ? t.saveMany : t.reviewSave : multi ? t.saveMany : t.save;
+        photoFlow ? unchecked ? t.reviewNext : mode === 'covers' ? t.saveMany : ownPhoto() ? t.save : t.reviewSave
+          : multi ? t.saveMany : t.save;
       submit.textContent = label + (useCount ? ' (' + count + ')' : '');
       submit.disabled = busy() || Boolean(batch.photo.crop) || (!pending && photoFlow && unconfirmed && !unchecked);
       progress.textContent = t.reviewProgress + ': ' + complete + ' / ' + selected.length;
