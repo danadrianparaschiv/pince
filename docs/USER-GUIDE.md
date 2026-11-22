@@ -46,8 +46,9 @@ A date can be a year (2019), a month (2019-05) or a full date (2019-05-20). Rows
 ## Covers
 
 - A book you photographed or gave a picture to keeps that cover.
-- After a book is saved, the library looks for up to two cover suggestions in the background. A book with no cover takes the first one found.
-- To change a cover, open the book, choose **Edit book details / Modifică datele cărții**, pick one of the pictures or upload your own, and save. **Find covers online / Caută coperte online** searches again.
+- After a book is saved without a cover, the library looks for up to two cover suggestions in the background, and the book takes the first one found.
+- A book saved with its own picture is not searched for other covers until you ask. After saving from a cover photo or a photo of several covers, the confirmation screen offers **Find covers online / Caută coperte pe web**; later, the same button is under **Edit book details / Modifică datele cărții**.
+- To change a cover, open the book, choose **Edit book details / Modifică datele cărții**, pick one of the pictures or upload your own, and save. **Find covers online / Caută coperte pe web** searches, or searches again.
 - A cover found on a bookshop or publisher page shows which site it came from.
 
 ## The bookshelf

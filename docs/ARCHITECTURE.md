@@ -47,7 +47,7 @@ All routes are under `/api`. Everything except the first three needs a signed-in
 | `GET /books`, `POST /books` | family | List the catalogue; add up to 20 books |
 | `GET`, `PATCH`, `DELETE /books/:id` | family; delete is parent only | One book |
 | `POST /books/delete` | parent | Delete several books |
-| `POST /books/:id/cover-lookup` | family | Search for covers again |
+| `POST /books/:id/cover-lookup` | family | Search for covers on request, or again |
 | `POST /scan` | family | Read a photo: one cover, a shelf, or several covers |
 | `POST /book-review` | family | Check one title against the catalogues |
 | `GET /shelf-photos`, `DELETE /shelf-photos/:id` | parent | List or delete kept shelf photos |
@@ -88,7 +88,7 @@ In every mode the rows then go through **review** (`book-review.js`): each title
 
 ## Finding covers
 
-Saving a book queues a lookup instead of doing it in the request.
+Saving a book queues a lookup instead of doing it in the request. A book whose chosen cover is the reader's own picture is the exception: a save queues nothing for it, when it is added, edited or restored, and it is searched when someone asks through `POST /books/:id/cover-lookup`. The search would only add pictures beside the reader's own, at the cost of requests to the outside services.
 
 1. `cover-jobs.js` marks the book as queued, with a random token, and puts a message on the queue.
 2. The worker claims the job through the API, using the token as its only credential. It never touches storage directly.

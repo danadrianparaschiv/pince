@@ -16,7 +16,7 @@ The name comes from Madam Pince, the librarian in the Harry Potter books. Pince 
   - photograph a shelf, and get one row per spine;
   - photograph several front covers laid out on a table, and get one row per book with its own cover cut from the photo.
 - **You confirm everything.** Text read from a photo is checked against Open Library and Google Books, and nothing is saved until you accept or correct each row.
-- **Covers.** A book keeps the cover you photographed or uploaded. Otherwise up to two suggestions are found in the background from Open Library, Google Books and, optionally, bookshop and publisher pages through Brave Search.
+- **Covers.** A book keeps the cover you photographed or uploaded. Otherwise up to two suggestions are found in the background from Open Library, Google Books and, optionally, bookshop and publisher pages through Brave Search. For a book that has its own picture, they are looked for only when you ask.
 - **A bookshelf to browse.** Search, sort, and filter by favourites, read or unread, with or without a cover, lent out, and by the shelf photo a book came from.
 - **A reading log.** A book marked as read keeps the day it was finished and a rating from one to five. The bookshelf counts the books finished this year and can sort by the latest finished.
 - **Lending.** Note who has a book and since when, and see at a glance which books are away from home.

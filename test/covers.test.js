@@ -57,6 +57,9 @@ test('a lookup that finishes late keeps an uploaded cover, a removed cover and e
   const { store, queue, provider, add, read, red } = await setup(t);
   const b = await add({ coverData: red }),
     original = b.cover;
+  // A book with its own picture is searched only on request.
+  assert.equal(queue.length, 0);
+  await requestCovers(store, b.id, { retry: true });
   await runCoverJob(store, queue[0], {
     provider: async () => {
       await editBook(store, b.id, {
@@ -80,6 +83,72 @@ test('a lookup that finishes late keeps an uploaded cover, a removed cover and e
   });
   assert.equal((await read(c.id)).cover, null);
   assert.equal((await read(c.id)).coverOptions.length, 2);
+});
+
+test("a book showing the reader's own picture is searched for covers only when asked", async (t) => {
+  const { store, queue, provider, add, read, red, blue } = await setup(t);
+  const edit = async (book, changes, base) =>
+    (await scheduleSaved(store, { books: [await editBook(store, book.id, { changes, base })] })).books[0];
+
+  // Saved with a photo of its cover: nothing is queued, then or when its details are corrected.
+  const own = await add({ coverData: red });
+  assert.ok(own.cover);
+  assert.equal(own.coverLookup, null);
+  const renamed = await edit(own, { title: 'Luna cea mică' }, { title: own.title });
+  assert.equal(renamed.coverLookup, null);
+  assert.equal(queue.length, 0);
+
+  // Asking is all it takes. The two pictures found sit beside the photo, which stays the cover.
+  const asked = await requestCovers(store, own.id, { retry: true });
+  assert.equal(asked.coverLookup.status, 'queued');
+  assert.equal(queue.length, 1);
+  await runCoverJob(store, queue[0], { provider });
+  const found = await read(own.id);
+  assert.equal(found.cover, own.cover);
+  assert.equal(found.coverOptions.length, 3);
+  // Having been asked once does not make later searches automatic.
+  await edit(found, { authors: 'Mara Popa' }, { authors: found.authors });
+  assert.equal(queue.length, 1);
+
+  // A book saved without a cover is still searched by itself, and takes the first cover found.
+  const bare = await add({ title: 'Soarele mare' });
+  assert.equal(bare.coverLookup.status, 'queued');
+  assert.equal(queue.length, 2);
+  await runCoverJob(store, queue[1], { provider });
+  const web = await read(bare.id);
+  assert.equal(web.cover, web.coverOptions[0].cover);
+  // While a found cover is the chosen one, a corrected title is searched again.
+  assert.equal(
+    (await edit(web, { title: 'Soarele cel mare' }, { title: web.title })).coverLookup.status,
+    'queued',
+  );
+  assert.equal(queue.length, 3);
+  await runCoverJob(store, queue[2], { provider });
+
+  // Once the reader uploads their own picture, the searches stop; removing it brings them back.
+  const now = await read(bare.id);
+  const uploaded = await edit(now, { cover: blue }, { cover: now.cover });
+  assert.equal(uploaded.coverOptions.find((c) => c.cover === uploaded.cover).source, 'upload');
+  await edit(uploaded, { title: 'Soarele' }, { title: uploaded.title });
+  assert.equal(queue.length, 3);
+  const mine = await read(bare.id);
+  // The title changed while the picture was the reader's own, so the search starts at once.
+  const removed = await edit(mine, { cover: null }, { cover: mine.cover });
+  assert.equal(removed.cover, null);
+  assert.equal(removed.coverLookup.status, 'queued');
+  assert.equal(queue.length, 4);
+
+  // Restoring a backup follows the same rule: only the book without its own picture is searched.
+  const rows = [
+    { id: randomUUID(), title: 'Cu fotografie', createdAt: new Date().toISOString(), coverData: red },
+    { id: randomUUID(), title: 'Fără copertă', createdAt: new Date().toISOString() },
+  ];
+  const restored = (await scheduleSaved(store, await addBooks(store, rows, true))).books;
+  assert.deepEqual(
+    restored.map((b) => b.coverLookup?.status ?? null),
+    [null, 'queued'],
+  );
+  assert.equal(queue.length, 5);
 });
 
 test('deleted books and superseded metadata cannot receive stale covers', async (t) => {
